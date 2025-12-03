@@ -10,6 +10,7 @@ import {
   signal,
   computed,
   effect,
+  EffectRef,
   WritableSignal,
   ViewChild,
   ElementRef,
@@ -17,7 +18,8 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Subject, Observable, of, delay } from 'rxjs';
+import { Subject, Observable, of, delay, Subscription } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import {
   ButtonModule,
   IconModule
@@ -678,6 +680,11 @@ export class AiAssistDrawerComponent implements OnInit, OnDestroy, OnChanges {
   processingAction = signal<string | null>(null);
   isSlidingIn = signal(false);
 
+  private destroy$ = new Subject<void>();
+  private effectRef?: EffectRef;
+  private timeoutIds: number[] = [];
+  private subscriptions: Subscription[] = [];
+
   constructor() {
     // Effect will be set up after inputs are initialized
   }
@@ -685,13 +692,16 @@ export class AiAssistDrawerComponent implements OnInit, OnDestroy, OnChanges {
   ngOnInit() {
     // Watch for drawer opening to trigger slide-in animation
     if (this.isOpen) {
-      effect(() => {
+      this.effectRef = effect(() => {
         if (this.isOpen && this.isOpen()) {
           this.isSlidingIn.set(true);
-          setTimeout(() => {
+          const timeoutId = window.setTimeout(() => {
             this.inputRef?.nativeElement.focus();
             this.isSlidingIn.set(false);
+            // Remove from tracking array
+            this.timeoutIds = this.timeoutIds.filter(id => id !== timeoutId);
           }, 300);
+          this.timeoutIds.push(timeoutId);
         }
       });
     }
@@ -701,15 +711,33 @@ export class AiAssistDrawerComponent implements OnInit, OnDestroy, OnChanges {
     // Handle input changes if needed
     if (changes['isOpen'] && this.isOpen && this.isOpen()) {
       this.isSlidingIn.set(true);
-      setTimeout(() => {
+      const timeoutId = window.setTimeout(() => {
         this.inputRef?.nativeElement.focus();
         this.isSlidingIn.set(false);
+        // Remove from tracking array
+        this.timeoutIds = this.timeoutIds.filter(id => id !== timeoutId);
       }, 300);
+      this.timeoutIds.push(timeoutId);
     }
   }
 
   ngOnDestroy() {
-    // Cleanup if needed
+    // Clean up effect
+    if (this.effectRef) {
+      this.effectRef.destroy();
+    }
+
+    // Clear all pending timeouts
+    this.timeoutIds.forEach(id => clearTimeout(id));
+    this.timeoutIds = [];
+
+    // Unsubscribe from all subscriptions
+    this.subscriptions.forEach(sub => sub.unsubscribe());
+    this.subscriptions = [];
+
+    // Complete destroy subject
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   close() {
@@ -744,16 +772,23 @@ export class AiAssistDrawerComponent implements OnInit, OnDestroy, OnChanges {
     this.sending.set(true);
 
     // Simulate AI response with streaming
-    this.simulateStreamingResponse(message).subscribe({
-      next: (response) => {
-        this.sending.set(false);
-        setTimeout(() => this.scrollToBottom(), 100);
-      },
-      error: (error) => {
-        console.error('Error sending message:', error);
-        this.sending.set(false);
-      }
-    });
+    const subscription = this.simulateStreamingResponse(message)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.sending.set(false);
+          const timeoutId = window.setTimeout(() => {
+            this.scrollToBottom();
+            this.timeoutIds = this.timeoutIds.filter(id => id !== timeoutId);
+          }, 100);
+          this.timeoutIds.push(timeoutId);
+        },
+        error: (error) => {
+          console.error('Error sending message:', error);
+          this.sending.set(false);
+        }
+      });
+    this.subscriptions.push(subscription);
   }
 
   handleAction(action: SuggestedAction) {
@@ -761,24 +796,31 @@ export class AiAssistDrawerComponent implements OnInit, OnDestroy, OnChanges {
     this.actionTriggered.emit(action);
 
     // Simulate diagnostic flow
-    this.simulateDiagnosticFlow(action).subscribe({
-      next: (result) => {
-        this.processingAction.set(null);
-        // Add result as assistant message
-        const resultMessage: ChatMessage = {
-          id: Date.now().toString(),
-          role: 'assistant',
-          content: result,
-          timestamp: new Date().toISOString()
-        };
-        this.messages.update(msgs => [...msgs, resultMessage]);
-        setTimeout(() => this.scrollToBottom(), 100);
-      },
-      error: (error) => {
-        console.error('Error processing action:', error);
-        this.processingAction.set(null);
-      }
-    });
+    const subscription = this.simulateDiagnosticFlow(action)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (result) => {
+          this.processingAction.set(null);
+          // Add result as assistant message
+          const resultMessage: ChatMessage = {
+            id: Date.now().toString(),
+            role: 'assistant',
+            content: result,
+            timestamp: new Date().toISOString()
+          };
+          this.messages.update(msgs => [...msgs, resultMessage]);
+          const timeoutId = window.setTimeout(() => {
+            this.scrollToBottom();
+            this.timeoutIds = this.timeoutIds.filter(id => id !== timeoutId);
+          }, 100);
+          this.timeoutIds.push(timeoutId);
+        },
+        error: (error) => {
+          console.error('Error processing action:', error);
+          this.processingAction.set(null);
+        }
+      });
+    this.subscriptions.push(subscription);
   }
 
   // Placeholder: Simulate streaming AI response
@@ -832,6 +874,11 @@ export class AiAssistDrawerComponent implements OnInit, OnDestroy, OnChanges {
           observer.complete();
         }
       }, 50); // Stream one word every 50ms
+
+      // Cleanup function to clear interval if Observable is unsubscribed
+      return () => {
+        clearInterval(streamInterval);
+      };
     });
   }
 
@@ -978,4 +1025,3 @@ Would you like code examples for implementing these fixes?`
     }
   }
 }
-
