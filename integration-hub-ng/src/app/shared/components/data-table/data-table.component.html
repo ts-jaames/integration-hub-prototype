@@ -1,0 +1,13 @@
+<div class="data-table-wrapper">
+  <ibm-table 
+    [model]="model" 
+    [skeleton]="loading"
+    [size]="size"
+    [sortable]="sortable"
+    [stickyHeader]="stickyHeader"
+    (rowClick)="handleRowClick($event)"
+    (selectAll)="onSelectAll.emit($event)"
+    (selectRow)="onSelectRow.emit($event)">
+  </ibm-table>
+</div>
+

@@ -1,0 +1,35 @@
+[
+  {
+    "id": "github",
+    "name": "GitHub",
+    "description": "Connect to GitHub repositories and manage code integrations",
+    "icon": "logo-github",
+    "category": "Development",
+    "authTypes": ["OAuth", "Personal Access Token"]
+  },
+  {
+    "id": "salesforce",
+    "name": "Salesforce",
+    "description": "Integrate with Salesforce CRM and sync customer data",
+    "icon": "logo-salesforce",
+    "category": "CRM",
+    "authTypes": ["OAuth", "API Key"]
+  },
+  {
+    "id": "slack",
+    "name": "Slack",
+    "description": "Connect Slack workspaces for notifications and messaging",
+    "icon": "logo-slack",
+    "category": "Communication",
+    "authTypes": ["OAuth", "Webhook"]
+  },
+  {
+    "id": "stripe",
+    "name": "Stripe",
+    "description": "Integrate payment processing and subscription management",
+    "icon": "credit-card",
+    "category": "Payment",
+    "authTypes": ["API Key", "OAuth"]
+  }
+]
+

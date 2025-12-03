@@ -1,0 +1,54 @@
+<nav class="sidebar-nav" role="navigation" aria-label="Main navigation">
+  @for (section of visibleSections(); track section.id; let sectionIndex = $index) {
+    <div class="nav-section">
+      <button
+        type="button"
+        class="nav-section-button"
+        [attr.aria-expanded]="isExpanded(section.id)"
+        [attr.aria-controls]="'section-' + section.id"
+        [attr.tabindex]="focusedIndex() === getSectionFocusIndex(section.id) ? 0 : -1"
+        (click)="toggleSection(section.id, $event)"
+        (focus)="onSectionFocus(section.id)"
+        (keydown.enter)="toggleSection(section.id, $event)"
+        (keydown.space)="toggleSection(section.id, $event)">
+        <span class="section-label">{{ section.label }}</span>
+        <svg 
+          class="chevron-icon" 
+          [class.expanded]="isExpanded(section.id)"
+          width="14" 
+          height="14" 
+          viewBox="0 0 20 20" 
+          fill="none" 
+          xmlns="http://www.w3.org/2000/svg">
+          <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      
+      <ul
+        class="nav-links"
+        [id]="'section-' + section.id"
+        [attr.aria-hidden]="!isExpanded(section.id)"
+        [class.expanded]="isExpanded(section.id)">
+        <li class="nav-links-wrapper">
+          @for (link of section.links; track link.path; let linkIndex = $index) {
+            <div class="nav-link-item">
+              <a
+                [routerLink]="link.path"
+                routerLinkActive="is-active"
+                [routerLinkActiveOptions]="link.path === '/' ? {exact: true} : {exact: false}"
+                class="nav-link"
+                [attr.tabindex]="focusedIndex() === getLinkFocusIndex(section.id, link.path) ? 0 : -1"
+                (focus)="onLinkFocus(section.id, link.path)">
+                @if (link.icon) {
+                  <svg class="nav-link-icon" width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" [innerHTML]="getIconSvg(link.icon)"></svg>
+                }
+                <span class="nav-link-text">{{ link.label }}</span>
+              </a>
+            </div>
+          }
+        </li>
+      </ul>
+    </div>
+  }
+</nav>
+

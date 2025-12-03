@@ -1,0 +1,153 @@
+<div class="app-container">
+  <!-- Mobile menu overlay -->
+  <div class="mobile-overlay" *ngIf="isMobileMenuOpen" (click)="closeMobileMenu()"></div>
+  
+  <aside class="app-sidebar" [class.open]="isMobileMenuOpen">
+    <div class="sidebar-header">
+      <a routerLink="/" class="sidebar-logo" (click)="closeMobileMenuOnNavigate()">
+        <span>HAVEN</span>
+      </a>
+      <button class="search-icon-button" (click)="openSearchModal()" aria-label="Search">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M9 17C13.4183 17 17 13.4183 17 9C17 4.58172 13.4183 1 9 1C4.58172 1 1 4.58172 1 9C1 13.4183 4.58172 17 9 17Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M19 19L14.65 14.65" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+    <app-sidebar-nav (click)="closeMobileMenuOnNavigate()"></app-sidebar-nav>
+    <div class="sidebar-footer">
+      <div class="role-selector-container" #roleSelectorContainer>
+        <button class="role-selector-button" (click)="toggleRoleSelector($event)" [attr.aria-label]="'Current role: ' + getCurrentRoleLabel()">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M10 10C12.2091 10 14 8.20914 14 6C14 3.79086 12.2091 2 10 2C7.79086 2 6 3.79086 6 6C6 8.20914 7.79086 10 10 10Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M3 18C3 14.6863 6.13401 12 10 12C13.866 12 17 14.6863 17 18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span class="role-label">{{ getCurrentRoleLabel() }}</span>
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" [class.rotated]="showRoleSelector">
+            <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <div class="role-dropdown" *ngIf="showRoleSelector" [class.dropdown-up]="!shouldOpenDropdownDown()" [class.dropdown-down]="shouldOpenDropdownDown()">
+          <div 
+            *ngFor="let role of roles" 
+            class="role-option"
+            [class.active]="currentRole === role.id"
+            (click)="selectRole(role.id, $event)">
+            <div class="role-option-content">
+              <div class="role-option-label">{{ role.label }}</div>
+              <div class="role-option-description">{{ role.description }}</div>
+            </div>
+            <svg *ngIf="currentRole === role.id" width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M7 10L9 12L13 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="app-main">
+    <div class="content-top-bar">
+      <div class="top-bar-left">
+        <button 
+          class="mobile-menu-button" 
+          (click)="toggleMobileMenu()" 
+          aria-label="Toggle menu"
+          aria-expanded="isMobileMenuOpen">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 5H17M3 10H17M3 15H17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <app-breadcrumbs></app-breadcrumbs>
+      </div>
+      <div class="top-bar-right">
+        <button class="theme-toggle-top" (click)="toggleTheme()" [attr.aria-label]="currentTheme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'">
+          <svg *ngIf="currentTheme === 'light'" width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M10 3V1M10 19V17M17 10H19M1 10H3M15.657 15.657L16.95 16.95M3.343 15.657L2.05 16.95M15.657 4.343L16.95 3.05M3.343 4.343L2.05 3.05M14 10C14 12.2091 12.2091 14 10 14C7.79086 14 6 12.2091 6 10C6 7.79086 7.79086 6 10 6C12.2091 6 14 7.79086 14 10Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <svg *ngIf="currentTheme === 'dark'" width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M17.293 13.293C16.3785 14.2077 15.2348 14.8616 13.9925 15.1909C12.7502 15.5202 11.4502 15.5159 10.2103 15.1784C8.97045 14.8409 7.83023 14.1801 6.92031 13.2702C6.01039 12.3603 5.34959 11.2201 5.01208 9.98022C4.67457 8.74036 4.67026 7.44035 4.99957 6.19803C5.32888 4.95572 5.98278 3.81205 6.89747 2.89747C7.81216 1.98278 8.95583 1.32888 10.1981 0.99957C11.4405 0.67026 12.7405 0.67457 13.9803 1.01208C15.2202 1.34959 16.3604 2.01039 17.2703 2.92031C18.1802 3.83023 18.841 4.97045 19.1785 6.21031C19.516 7.45017 19.5203 8.75018 19.191 9.9925C18.8617 11.2348 18.2077 12.3785 17.293 13.293Z" fill="currentColor"/>
+            <path d="M13 6C13 8.20914 11.2091 10 9 10C8.48716 10 8.00035 9.89454 7.55569 9.70711C7.84218 10.3782 8.31607 10.9421 8.90983 11.3339C9.50359 11.7257 10.1894 11.9258 10.8889 11.9091C11.5883 11.8924 12.2635 11.66 12.8371 11.2403C13.4107 10.8206 13.8563 10.2315 14.1211 9.54343C14.3858 8.85537 14.4583 8.09834 14.3296 7.36758C14.2009 6.63682 13.8766 5.96574 13.3944 5.43431C12.9123 4.90289 12.2941 4.53369 11.6111 4.37109C10.9282 4.2085 10.2102 4.26002 9.55569 4.51911C10.0003 4.33168 10.4872 4.22622 11 4.22622C12.2091 4.22622 13 5.79086 13 6Z" fill="var(--linear-bg)"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+    <div class="main-content">
+      <router-outlet></router-outlet>
+    </div>
+  </main>
+
+  <!-- Search Modal -->
+  <div class="search-modal-overlay" *ngIf="showSearchModal" (click)="closeSearchModal()">
+    <div class="search-modal" (click)="$event.stopPropagation()">
+      <div class="search-modal-header">
+        <div class="search-input-container">
+          <svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" class="search-icon">
+            <path d="M9 17C13.4183 17 17 13.4183 17 9C17 4.58172 13.4183 1 9 1C4.58172 1 1 4.58172 1 9C1 13.4183 4.58172 17 9 17Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M19 19L14.65 14.65" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <input 
+            #searchInput
+            type="text" 
+            class="search-modal-input" 
+            placeholder="Search..."
+            [value]="searchQuery"
+            (input)="onSearchInput($event)"
+            (keydown.escape)="closeSearchModal()">
+        </div>
+      </div>
+      <div class="search-results" *ngIf="searchResults.length > 0">
+        <div 
+          *ngFor="let result of searchResults; let i = index"
+          class="search-result-item"
+          [class.selected]="selectedResultIndex === i"
+          (click)="selectResult(result)"
+          (mouseenter)="selectedResultIndex = i">
+          <div class="search-result-icon">
+            <svg *ngIf="result.icon === 'building'" width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4 6L10 2L16 6V14L10 18L4 14V6Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <svg *ngIf="result.icon === 'users'" width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M10 10C12.2091 10 14 8.20914 14 6C14 3.79086 12.2091 2 10 2C7.79086 2 6 3.79086 6 6C6 8.20914 7.79086 10 10 10Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M3 18C3 14.6863 6.13401 12 10 12C13.866 12 17 14.6863 17 18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <svg *ngIf="result.icon === 'key'" width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M10 2L3 6V10C3 14 6.5 17.5 10 18C13.5 17.5 17 14 17 10V6L10 2Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M10 10V14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M10 6V8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <svg *ngIf="result.icon === 'api'" width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 7L10 3L17 7V13L10 17L3 13V7Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M10 3V17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <svg *ngIf="result.icon === 'chart'" width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 5H17M3 10H17M3 15H17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <svg *ngIf="result.icon === 'shield'" width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M10 2L3 6V10C3 14 6.5 17.5 10 18C13.5 17.5 17 14 17 10V6L10 2Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M7 10L9 12L13 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <svg *ngIf="result.icon === 'dashboard'" width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 10L9 4L9 9L17 9L17 11L9 11L9 16L3 10Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <svg *ngIf="result.icon === 'plus'" width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M10 3V17M3 10H17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="search-result-content">
+            <div class="search-result-title">{{ result.title }}</div>
+            <div class="search-result-description" [innerHTML]="highlightText(result.description, searchQuery)"></div>
+          </div>
+          <div class="search-result-category">{{ result.category }}</div>
+        </div>
+      </div>
+      <div class="search-empty" *ngIf="searchQuery && searchResults.length === 0">
+        <div class="search-empty-text">No results found for "{{ searchQuery }}"</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI Chat Dock -->
+  <app-ai-chat-dock></app-ai-chat-dock>
+
+</div>

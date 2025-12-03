@@ -1,0 +1,165 @@
+// Unified Data Table Styles
+// This file contains all table styles used across the application
+// Based on the Recent Activity table design from the Overview page
+
+// Base table styles - applied to all app-data-table components (minimal styling is now default)
+:host {
+  .data-table-wrapper {
+    width: 100%;
+  }
+
+  ::ng-deep ibm-table {
+    .bx--data-table,
+    .cds--data-table {
+      background: transparent !important;
+      border: none !important;
+      width: 100% !important;
+      overflow-x: visible !important;
+    }
+
+    // Hide checkbox column in all tables
+    .bx--data-table thead th:first-child,
+    .cds--data-table thead th:first-child,
+    .bx--data-table tbody td:first-child,
+    .cds--data-table tbody td:first-child,
+    .cds--data-table .cds--table-column-checkbox {
+      display: none !important;
+    }
+
+    // Remove zebra striping
+    .cds--data-table--zebra tbody tr:not(.cds--parent-row):not(.cds--data-table--selected):nth-child(even) {
+      background-color: transparent !important;
+    }
+
+    .cds--data-table--zebra tbody tr:not(.cds--parent-row):not(.cds--data-table--selected):nth-child(odd) {
+      background-color: transparent !important;
+    }
+
+    // Table header styles - matching Recent Activity table
+    .bx--data-table thead,
+    .cds--data-table thead {
+      background: transparent !important;
+
+      th {
+        background: transparent !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+        color: var(--linear-text-primary) !important;
+        font-size: 0.8rem !important;
+        font-weight: 700 !important;
+        text-transform: uppercase !important;
+        padding: 0 !important;
+        text-align: left !important;
+        white-space: normal !important;
+
+        &.cds--table-column-checkbox,
+        &.bx--table-column-checkbox {
+          color: var(--linear-text-primary) !important;
+          display: none !important;
+        }
+
+        // Fix button elements inside headers
+        button {
+          background: transparent !important;
+          color: var(--linear-text-primary) !important;
+          border: none !important;
+          text-align: left !important;
+          padding: 0 !important;
+
+          &:hover {
+            background: transparent !important;
+            text-decoration: underline !important;
+          }
+
+          &:focus {
+            background: rgba(255, 255, 255, 0.05) !important;
+            outline: none !important;
+          }
+        }
+
+        // Fix sort button specifically
+        .cds--table-sort,
+        .bx--table-sort {
+          background: transparent !important;
+          color: var(--linear-text-primary) !important;
+          text-align: left !important;
+        }
+      }
+
+      // Additional override for any Carbon header styles
+      th.cds--table-header-label,
+      th.bx--table-header-label {
+        color: var(--linear-text-primary) !important;
+        background: transparent !important;
+        text-align: left !important;
+      }
+    }
+
+    // Table body styles - matching Recent Activity table
+    .bx--data-table tbody,
+    .cds--data-table tbody {
+      background: transparent !important;
+
+      tr {
+        transition: background 150ms ease !important;
+
+        &:nth-child(odd) {
+          background: transparent !important;
+        }
+
+        &:nth-child(even) {
+          background: transparent !important;
+        }
+
+        &:hover {
+          background: rgba(255, 255, 255, 0.02) !important;
+        }
+
+        &:last-child td {
+          border-bottom: none !important;
+        }
+      }
+
+      td {
+        background: transparent !important;
+        color: var(--linear-text-secondary) !important;
+        font-size: 0.8rem !important;
+        padding: 0 !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+        text-align: left !important;
+        white-space: normal !important;
+        word-wrap: break-word !important;
+        overflow-wrap: break-word !important;
+      }
+    }
+
+    // Remove horizontal scrollbar and optimize layout
+    .bx--data-table-container,
+    .cds--data-table-container {
+      overflow-x: visible !important;
+      width: 100% !important;
+      max-width: 100% !important;
+    }
+  }
+}
+
+// Minimal variant is now the default - keeping this for backward compatibility
+// All tables now use minimal styling by default
+:host(.minimal) {
+  // Same as base styles - no changes needed
+}
+
+// Compact variant (for smaller tables) - if needed in future
+:host(.compact) {
+  ::ng-deep ibm-table {
+    .bx--data-table thead th,
+    .cds--data-table thead th {
+      font-size: 0.75rem !important;
+    }
+
+    .bx--data-table tbody td,
+    .cds--data-table tbody td {
+      font-size: 0.75rem !important;
+    }
+  }
+}
+

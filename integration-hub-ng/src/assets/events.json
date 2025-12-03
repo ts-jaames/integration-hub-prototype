@@ -1,0 +1,69 @@
+[
+  {
+    "id": "event-1",
+    "connectionId": "conn-1",
+    "connectionName": "GitHub Main",
+    "eventType": "push",
+    "status": "success",
+    "timestamp": "2024-11-05T15:30:00Z",
+    "description": "Repository push event received",
+    "payload": {
+      "repository": "my-app",
+      "branch": "main",
+      "commits": 3
+    }
+  },
+  {
+    "id": "event-2",
+    "connectionId": "conn-2",
+    "connectionName": "Salesforce Production",
+    "eventType": "object_created",
+    "status": "success",
+    "timestamp": "2024-11-05T15:25:00Z",
+    "description": "New contact created",
+    "payload": {
+      "objectType": "Contact",
+      "objectId": "003XX000004Y"
+    }
+  },
+  {
+    "id": "event-3",
+    "connectionId": "conn-4",
+    "connectionName": "Stripe Payments",
+    "eventType": "payment.succeeded",
+    "status": "success",
+    "timestamp": "2024-11-05T15:20:00Z",
+    "description": "Payment processed successfully",
+    "payload": {
+      "amount": 99.00,
+      "currency": "USD"
+    }
+  },
+  {
+    "id": "event-4",
+    "connectionId": "conn-1",
+    "connectionName": "GitHub Main",
+    "eventType": "pull_request",
+    "status": "pending",
+    "timestamp": "2024-11-05T15:15:00Z",
+    "description": "Pull request opened",
+    "payload": {
+      "repository": "my-app",
+      "number": 42
+    }
+  },
+  {
+    "id": "event-5",
+    "connectionId": "conn-3",
+    "connectionName": "Slack Engineering",
+    "eventType": "message",
+    "status": "error",
+    "timestamp": "2024-11-05T15:10:00Z",
+    "description": "Failed to send message",
+    "payload": {
+      "channel": "#engineering",
+      "error": "Connection timeout"
+    }
+  }
+]
+
