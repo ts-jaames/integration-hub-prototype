@@ -1,6 +1,6 @@
-# FSR Integration Hub Prototype
+# Integration Hub Prototype
 
-An Angular front-end prototype for the FSR Integration Hub, providing a comprehensive interface for managing integrations, APIs, companies, users, and system administration.
+An Angular front-end prototype for the Company Integration Hub, providing a comprehensive interface for managing integrations, APIs, companies, users, and system administration.
 
 ## Overview
 
