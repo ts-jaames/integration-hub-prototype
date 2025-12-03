@@ -75,10 +75,25 @@ import { AiAssistantService, Insight } from '../core/ai-assistant.service';
               </div>
               <div class="insight-actions">
                 <button 
+                  *ngIf="insight.workflowType"
+                  ibmButton="secondary" 
+                  size="sm"
+                  (click)="startManualWorkflow(insight.id, $event)">
+                  Start Manual Resolution
+                </button>
+                <button 
+                  *ngIf="insight.workflowType"
                   ibmButton="primary" 
                   size="sm"
-                  (click)="startWorkflow(insight.id, $event)">
-                  {{ insight.workflowType ? 'Start Resolution' : 'View Details' }}
+                  (click)="startAgentMode(insight.id, $event)">
+                  Let AI Handle It (Beta)
+                </button>
+                <button 
+                  *ngIf="!insight.workflowType"
+                  ibmButton="primary" 
+                  size="sm"
+                  (click)="viewInsight(insight.id)">
+                  View Details
                 </button>
               </div>
             </div>
@@ -339,6 +354,16 @@ export class AiAssistantInsightsComponent implements OnInit {
     } else {
       this.viewInsight(insightId);
     }
+  }
+
+  startManualWorkflow(insightId: string, event: Event) {
+    event.stopPropagation();
+    this.router.navigate(['/ai-assistant/workflow', insightId]);
+  }
+
+  startAgentMode(insightId: string, event: Event) {
+    event.stopPropagation();
+    this.router.navigate(['/ai-assistant/agent', insightId]);
   }
 }
 
