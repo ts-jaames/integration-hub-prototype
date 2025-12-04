@@ -1,13 +1,18 @@
 import { Component, OnInit, signal, inject } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import {
   ButtonModule,
   TagModule,
-  IconModule
+  IconModule,
+  ToggleModule
 } from 'carbon-components-angular';
 import { AiAssistantService, Insight } from '../core/ai-assistant.service';
-import { AgentActivityLogComponent, AgentActivity } from '../shared/components/agent-activity-log/agent-activity-log.component';
+import { AgentActivityLogComponent } from '../shared/components/agent-activity-log/agent-activity-log.component';
+import { StepCorrectionModalComponent } from '../shared/components/step-correction-modal/step-correction-modal.component';
+import { AgentTeachService } from '../core/services/agent-teach.service';
+import { AgentStep, StepFeedback } from '../core/models/agent-resolution.model';
 
 @Component({
   selector: 'app-ai-assistant-agent-summary',
@@ -57,7 +62,7 @@ import { AgentActivityLogComponent, AgentActivity } from '../shared/components/a
               <span class="stat-label">Total Duration</span>
             </div>
             <div class="stat-item">
-              <span class="stat-value">{{ activityLog().length }}</span>
+              <span class="stat-value">{{ agentSteps().length }}</span>
               <span class="stat-label">Actions Taken</span>
             </div>
           </div>
@@ -65,8 +70,24 @@ import { AgentActivityLogComponent, AgentActivity } from '../shared/components/a
 
         <!-- Activity Log -->
         <div class="summary-card">
-          <h3 class="card-title">Complete Activity Log</h3>
-          <app-agent-activity-log [activities]="activityLog"></app-agent-activity-log>
+          <div class="log-header-controls">
+            <h3 class="card-title">Complete Activity Log</h3>
+            <div class="teach-mode-control" *ngIf="canTeach()">
+              <label class="teach-mode-label">
+                <span>Teach Mode</span>
+                <ibm-toggle
+                  [checked]="teachMode()"
+                  (checkedChange)="teachMode.set($event)"
+                  [ariaLabel]="'Toggle Teach Mode'">
+                </ibm-toggle>
+              </label>
+            </div>
+          </div>
+          <app-agent-activity-log 
+            [steps]="agentSteps"
+            [teachMode]="teachMode"
+            (correctStep)="openCorrectionModal($event)">
+          </app-agent-activity-log>
         </div>
 
         <!-- Actions -->
@@ -85,6 +106,14 @@ import { AgentActivityLogComponent, AgentActivity } from '../shared/components/a
         </div>
       </ng-template>
     </div>
+
+    <!-- Step Correction Modal -->
+    <app-step-correction-modal
+      [open]="correctionModalOpen"
+      [step]="selectedStep"
+      (saved)="onFeedbackSaved($event)"
+      (cancelled)="closeCorrectionModal()">
+    </app-step-correction-modal>
   `,
   styles: [`
     .page-container {
@@ -178,6 +207,27 @@ import { AgentActivityLogComponent, AgentActivity } from '../shared/components/a
       margin: 0 0 1.5rem 0;
     }
 
+    .log-header-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .teach-mode-control {
+      display: flex;
+      align-items: center;
+    }
+
+    .teach-mode-label {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 0.875rem;
+      color: var(--linear-text-primary);
+      cursor: pointer;
+    }
+
     .summary-stats {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -226,6 +276,12 @@ import { AgentActivityLogComponent, AgentActivity } from '../shared/components/a
       .summary-stats {
         grid-template-columns: 1fr;
       }
+
+      .log-header-controls {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+      }
     }
   `]
 })
@@ -233,13 +289,18 @@ export class AiAssistantAgentSummaryComponent implements OnInit {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private aiAssistant = inject(AiAssistantService);
+  private teachService = inject(AgentTeachService);
 
   insight = signal<Insight | null>(null);
   loading = signal(true);
-  activityLog = signal<AgentActivity[]>([]);
+  agentSteps = signal<AgentStep[]>([]);
+  teachMode = signal(false);
+  correctionModalOpen = signal(false);
+  selectedStep = signal<AgentStep | null>(null);
 
   completedSteps = signal(5);
   totalDuration = signal('8.2s');
+  canTeach = signal(true); // For now, always true
 
   ngOnInit() {
     const insightId = this.route.snapshot.paramMap.get('id');
@@ -247,7 +308,7 @@ export class AiAssistantAgentSummaryComponent implements OnInit {
       this.aiAssistant.getInsightById(insightId).subscribe(insight => {
         if (insight) {
           this.insight.set(insight);
-          this.loadActivityLog(insight);
+          this.loadAgentSteps(insight, insightId);
           this.loading.set(false);
         } else {
           this.loading.set(false);
@@ -258,97 +319,181 @@ export class AiAssistantAgentSummaryComponent implements OnInit {
     }
   }
 
-  loadActivityLog(insight: Insight) {
-    // Generate mock activity log based on the workflow
-    const activities: AgentActivity[] = [
+  loadAgentSteps(insight: Insight, resolutionId: string) {
+    // Load existing feedback
+    const feedbackMap = this.teachService.getAllFeedbackForResolution(resolutionId);
+
+    // Generate mock steps with confidence scores
+    const steps: AgentStep[] = [
       {
-        id: '1',
+        id: 'step-1',
+        index: 1,
+        label: 'Starting: Reviewing credential usage',
+        status: 'started',
+        type: 'info',
+        message: 'Beginning analysis of credential usage across integrations',
         timestamp: new Date(Date.now() - 10000).toISOString(),
-        action: 'Agent started resolution workflow',
-        details: `Beginning automated resolution for: ${insight.title}`,
-        status: 'info',
-        metadata: { insightId: insight.id }
+        confidence: 95,
+        needsReview: false,
+        outputText: 'Beginning analysis of credential usage across integrations'
       },
       {
-        id: '2',
-        timestamp: new Date(Date.now() - 9000).toISOString(),
-        action: 'Starting: Reviewing credential usage',
-        status: 'info'
-      },
-      {
-        id: '3',
+        id: 'step-2',
+        index: 2,
+        label: 'Completed: Reviewing credential usage',
+        status: 'completed',
+        type: 'success',
+        message: 'Found 3 integrations using this credential. All are active and healthy.',
         timestamp: new Date(Date.now() - 8000).toISOString(),
-        action: 'Completed: Reviewing credential usage',
-        details: 'Found 3 integrations using this credential. All are active and healthy.',
-        status: 'success',
-        metadata: { duration: '1200ms', integrationsFound: 3 }
+        durationMs: 1200,
+        confidence: 92,
+        needsReview: false,
+        outputText: 'Found 3 integrations using this credential. All are active and healthy.',
+        feedback: feedbackMap.get('step-2')
       },
       {
-        id: '4',
+        id: 'step-3',
+        index: 3,
+        label: 'Starting: Generating replacement credential',
+        status: 'started',
+        type: 'info',
+        message: 'Initiating credential generation process',
         timestamp: new Date(Date.now() - 7000).toISOString(),
-        action: 'Starting: Generating replacement credential',
-        status: 'info'
+        confidence: 88,
+        needsReview: false,
+        outputText: 'Initiating credential generation process'
       },
       {
-        id: '5',
+        id: 'step-4',
+        index: 4,
+        label: 'Completed: Generating replacement credential',
+        status: 'completed',
+        type: 'success',
+        message: 'Generated new API key: sk_live_***abc123. Expires in 365 days.',
         timestamp: new Date(Date.now() - 6000).toISOString(),
-        action: 'Completed: Generating replacement credential',
-        details: 'Generated new API key: sk_live_***abc123. Expires in 365 days.',
-        status: 'success',
-        metadata: { duration: '1500ms', credentialType: 'API Key' }
+        durationMs: 1500,
+        confidence: 65, // Low confidence - needs review
+        needsReview: true,
+        outputText: 'Generated new API key: sk_live_***abc123. Expires in 365 days.',
+        feedback: feedbackMap.get('step-4')
       },
       {
-        id: '6',
+        id: 'step-5',
+        index: 5,
+        label: 'Starting: Updating affected integrations',
+        status: 'started',
+        type: 'info',
+        message: 'Preparing to update credentials in affected integrations',
         timestamp: new Date(Date.now() - 5000).toISOString(),
-        action: 'Starting: Updating affected integrations',
-        status: 'info'
+        confidence: 90,
+        needsReview: false,
+        outputText: 'Preparing to update credentials in affected integrations'
       },
       {
-        id: '7',
+        id: 'step-6',
+        index: 6,
+        label: 'Completed: Updating affected integrations',
+        status: 'completed',
+        type: 'success',
+        message: 'Updated credentials in Orders API, Payments API, and Inventory API. All updates successful.',
         timestamp: new Date(Date.now() - 4000).toISOString(),
-        action: 'Completed: Updating affected integrations',
-        details: 'Updated credentials in Orders API, Payments API, and Inventory API. All updates successful.',
-        status: 'success',
-        metadata: { duration: '1800ms', integrationsUpdated: 3 }
+        durationMs: 1800,
+        confidence: 85,
+        needsReview: false,
+        outputText: 'Updated credentials in Orders API, Payments API, and Inventory API. All updates successful.',
+        feedback: feedbackMap.get('step-6')
       },
       {
-        id: '8',
+        id: 'step-7',
+        index: 7,
+        label: 'Starting: Verifying connection health',
+        status: 'started',
+        type: 'info',
+        message: 'Running health checks on updated integrations',
         timestamp: new Date(Date.now() - 3000).toISOString(),
-        action: 'Starting: Verifying connection health',
-        status: 'info'
+        confidence: 93,
+        needsReview: false,
+        outputText: 'Running health checks on updated integrations'
       },
       {
-        id: '9',
+        id: 'step-8',
+        index: 8,
+        label: 'Completed: Verifying connection health',
+        status: 'completed',
+        type: 'success',
+        message: 'All 3 integrations verified. Health checks passed. Response times normal.',
         timestamp: new Date(Date.now() - 2000).toISOString(),
-        action: 'Completed: Verifying connection health',
-        details: 'All 3 integrations verified. Health checks passed. Response times normal.',
-        status: 'success',
-        metadata: { duration: '2000ms', healthChecks: '3/3 passed' }
+        durationMs: 2000,
+        confidence: 78,
+        needsReview: false,
+        outputText: 'All 3 integrations verified. Health checks passed. Response times normal.',
+        feedback: feedbackMap.get('step-8')
       },
       {
-        id: '10',
+        id: 'step-9',
+        index: 9,
+        label: 'Starting: Preparing revocation of old credential',
+        status: 'started',
+        type: 'info',
+        message: 'Scheduling revocation of expired credential',
         timestamp: new Date(Date.now() - 1000).toISOString(),
-        action: 'Starting: Preparing revocation of old credential',
-        status: 'info'
+        confidence: 87,
+        needsReview: false,
+        outputText: 'Scheduling revocation of expired credential'
       },
       {
-        id: '11',
+        id: 'step-10',
+        index: 10,
+        label: 'Completed: Preparing revocation of old credential',
+        status: 'completed',
+        type: 'success',
+        message: 'Old credential marked for revocation. Will be deactivated in 5 minutes after verification period.',
         timestamp: new Date().toISOString(),
-        action: 'Completed: Preparing revocation of old credential',
-        details: 'Old credential marked for revocation. Will be deactivated in 5 minutes after verification period.',
-        status: 'success',
-        metadata: { duration: '1100ms' }
-      },
-      {
-        id: '12',
-        timestamp: new Date().toISOString(),
-        action: 'Resolution workflow completed successfully',
-        details: 'All steps completed without errors. The insight has been resolved.',
-        status: 'success',
-        metadata: { totalSteps: 5, totalDuration: '8.2s' }
+        durationMs: 1100,
+        confidence: 91,
+        needsReview: false,
+        outputText: 'Old credential marked for revocation. Will be deactivated in 5 minutes after verification period.',
+        feedback: feedbackMap.get('step-10')
       }
     ];
-    this.activityLog.set(activities);
+
+    this.agentSteps.set(steps);
+  }
+
+  openCorrectionModal(step: AgentStep) {
+    this.selectedStep.set(step);
+    this.correctionModalOpen.set(true);
+  }
+
+  closeCorrectionModal() {
+    this.correctionModalOpen.set(false);
+    this.selectedStep.set(null);
+  }
+
+  async onFeedbackSaved(feedback: StepFeedback) {
+    const step = this.selectedStep();
+    const insightId = this.route.snapshot.paramMap.get('id');
+    
+    if (step && insightId) {
+      // Save feedback
+      await this.teachService.saveStepFeedback(insightId, step.id, feedback);
+      
+      // Update the step with feedback
+      const steps = [...this.agentSteps()];
+      const stepIndex = steps.findIndex(s => s.id === step.id);
+      if (stepIndex !== -1) {
+        steps[stepIndex] = {
+          ...steps[stepIndex],
+          feedback,
+          confidence: feedback.adjustedConfidence,
+          needsReview: feedback.adjustedConfidence < 70 || feedback.verdict !== 'correct',
+          outputText: feedback.updatedOutput || steps[stepIndex].outputText
+        };
+        this.agentSteps.set(steps);
+      }
+      
+      this.closeCorrectionModal();
+    }
   }
 
   getResolvedDate(): string {
@@ -370,4 +515,3 @@ export class AiAssistantAgentSummaryComponent implements OnInit {
     this.router.navigate(['/ai-assistant/insights']);
   }
 }
-

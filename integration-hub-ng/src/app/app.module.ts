@@ -20,7 +20,8 @@ import {
   CheckboxModule,
   ModalModule,
   TagModule,
-  TabsModule
+  TabsModule,
+  ToggleModule
 } from 'carbon-components-angular';
 
 import { AppComponent } from './app.component';
@@ -52,6 +53,7 @@ import { AiAssistantAgentModeComponent } from './pages/ai-assistant-agent-mode.c
 import { AiAssistantAgentSummaryComponent } from './pages/ai-assistant-agent-summary.component';
 import { AgentStatusComponent } from './shared/components/agent-status/agent-status.component';
 import { AgentActivityLogComponent } from './shared/components/agent-activity-log/agent-activity-log.component';
+import { StepCorrectionModalComponent } from './shared/components/step-correction-modal/step-correction-modal.component';
 import { DataTableComponent } from './shared/components/data-table/data-table.component';
 import { AddVendorCompanyDrawerComponent } from './shared/components/add-vendor-company-drawer/add-vendor-company-drawer.component';
 import { AiChatDockComponent } from './shared/components/ai-chat-dock/ai-chat-dock.component';
@@ -224,6 +226,7 @@ const routes: Routes = [
   CheckboxModule,
   ModalModule,
   TabsModule,
+  ToggleModule,
     LumenIconComponent,
     DataTableComponent,
     // Admin pages (standalone components)
@@ -246,6 +249,7 @@ const routes: Routes = [
     AiAssistDrawerComponent,
     AgentStatusComponent,
     AgentActivityLogComponent,
+    StepCorrectionModalComponent,
     RouterModule.forRoot(routes, { bindToComponentInputs: true }),
   ],
   providers: [],
