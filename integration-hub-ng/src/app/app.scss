@@ -683,5 +683,13 @@
   .bx--modal-container,
   .cds--modal-container {
     z-index: 2001 !important;
+    max-width: 700px !important;
+  }
+
+  // Remove mask images from modal scroll content
+  .bx--modal-scroll-content,
+  .cds--modal-scroll-content {
+    mask-image: none !important;
+    -webkit-mask-image: none !important;
   }
 }

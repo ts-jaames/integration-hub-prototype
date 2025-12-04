@@ -1,8 +1,10 @@
-import { Component } from '@angular/core';
+import { Component, signal, ViewEncapsulation } from '@angular/core';
+import { SuggestedAction } from '../shared/components/ai-assist-drawer/ai-assist-drawer.component';
 
 @Component({
   selector: 'app-webhooks-docs',
   standalone: false,
+  encapsulation: ViewEncapsulation.None,
   template: `
     <app-doc-layout>
       <h1>Webhooks</h1>
@@ -90,7 +92,20 @@ import { Component } from '@angular/core';
         To create a webhook, send a POST request to the webhooks endpoint:
       </p>
       
-      <app-code-block [code]="createWebhookCode"></app-code-block>
+      <div class="code-section-wrapper">
+        <div class="code-actions-bar">
+          <button 
+            class="ai-assist-button"
+            (click)="openAssistDrawer('create-webhook')"
+            type="button">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM13 17H11V15H13V17ZM13 13H11V7H13V13Z" fill="currentColor"/>
+            </svg>
+            <span>AI Assist</span>
+          </button>
+        </div>
+        <app-code-block [code]="createWebhookCode"></app-code-block>
+      </div>
       
       <h3 id="webhook-configuration">Webhook configuration</h3>
       
@@ -123,7 +138,20 @@ import { Component } from '@angular/core';
         Each webhook request includes a JSON payload with the following structure:
       </p>
       
-      <app-code-block [code]="webhookPayloadCode"></app-code-block>
+      <div class="code-section-wrapper">
+        <div class="code-actions-bar">
+          <button 
+            class="ai-assist-button"
+            (click)="openAssistDrawer('webhook-payload')"
+            type="button">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM13 17H11V15H13V17ZM13 13H11V7H13V13Z" fill="currentColor"/>
+            </svg>
+            <span>AI Assist</span>
+          </button>
+        </div>
+        <app-code-block [code]="webhookPayloadCode"></app-code-block>
+      </div>
       
       <h3 id="payload-fields">Payload fields</h3>
       
@@ -142,7 +170,20 @@ import { Component } from '@angular/core';
         of the request body using your webhook secret and compare it to the signature header.
       </p>
       
-      <app-code-block [code]="verifyWebhookCode"></app-code-block>
+      <div class="code-section-wrapper">
+        <div class="code-actions-bar">
+          <button 
+            class="ai-assist-button"
+            (click)="openAssistDrawer('verify-webhook')"
+            type="button">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM13 17H11V15H13V17ZM13 13H11V7H13V13Z" fill="currentColor"/>
+            </svg>
+            <span>AI Assist</span>
+          </button>
+        </div>
+        <app-code-block [code]="verifyWebhookCode"></app-code-block>
+      </div>
       
       <h2 id="delete-webhook">Delete a webhook</h2>
       
@@ -193,12 +234,142 @@ import { Component } from '@angular/core';
         during development to inspect incoming webhook payloads.</p>
       </div>
     </app-doc-layout>
+
+    <!-- AI Assist Drawer -->
+    <app-ai-assist-drawer
+      [isOpen]="assistDrawerOpen"
+      [context]="assistContext()"
+      [description]="assistDescription()"
+      [suggestedActions]="assistSuggestedActions"
+      (closed)="closeAssistDrawer()"
+      (actionTriggered)="handleAssistAction($event)">
+    </app-ai-assist-drawer>
   `,
   styles: [`
-    // Styles are handled by doc-layout component
+    .code-section-wrapper {
+      margin: 1.5rem 0;
+      display: block;
+    }
+
+    .code-actions-bar {
+      display: flex !important;
+      justify-content: flex-end !important;
+      margin-bottom: 0.75rem !important;
+      padding: 0 !important;
+      width: 100% !important;
+      min-height: 32px !important;
+    }
+
+    .ai-assist-button {
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 0.5rem !important;
+      font-size: 0.875rem !important;
+      padding: 0.5rem 0.75rem !important;
+      background: #ffffff !important;
+      border: 1px solid rgba(0, 0, 0, 0.15) !important;
+      border-radius: 4px !important;
+      cursor: pointer !important;
+      transition: all 0.2s ease !important;
+      color: #161616 !important;
+      font-weight: 400 !important;
+      line-height: 1.4 !important;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+      margin: 0 !important;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+      min-width: 100px !important;
+      height: auto !important;
+    }
+
+    .ai-assist-button:hover {
+      background: #f4f4f4;
+      border-color: rgba(0, 0, 0, 0.15);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+    }
+
+    .ai-assist-button:active {
+      transform: scale(0.98);
+    }
+
+    .ai-assist-button svg {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      color: #161616;
+      display: block;
+    }
+
+    .ai-assist-button span {
+      display: inline-block;
+    }
   `]
 })
 export class WebhooksDocsComponent {
+  assistDrawerOpen = signal(false);
+  assistContext = signal<string>('');
+  assistDescription = signal<string>('');
+  assistSuggestedActions = signal<SuggestedAction[]>([
+    {
+      id: 'troubleshoot-webhook',
+      label: 'Troubleshoot webhook',
+      icon: '🔍',
+      category: 'Diagnostics'
+    },
+    {
+      id: 'explain-payload',
+      label: 'Explain expected payload',
+      icon: '📋',
+      category: 'Documentation'
+    },
+    {
+      id: 'generate-retry-logic',
+      label: 'Generate retry logic snippet',
+      icon: '💻',
+      category: 'Code'
+    },
+    {
+      id: 'check-misconfigurations',
+      label: 'Check for common misconfigurations',
+      icon: '⚠️',
+      category: 'Security'
+    }
+  ]);
+
+  openAssistDrawer(context: string) {
+    const contextMap: Record<string, { context: string; description: string }> = {
+      'create-webhook': {
+        context: 'Creating Webhooks',
+        description: 'I can help you create and configure webhooks, explain the required parameters, and troubleshoot common setup issues.'
+      },
+      'webhook-payload': {
+        context: 'Webhook Payloads',
+        description: 'I can explain the payload structure, help you parse and validate webhook data, and show examples for different event types.'
+      },
+      'verify-webhook': {
+        context: 'Webhook Verification',
+        description: 'I can help you implement signature verification, explain security best practices, and troubleshoot verification issues.'
+      }
+    };
+
+    const config = contextMap[context] || {
+      context: 'Webhooks',
+      description: 'I can help you with webhook configuration, troubleshooting, and best practices.'
+    };
+
+    this.assistContext.set(config.context);
+    this.assistDescription.set(config.description);
+    this.assistDrawerOpen.set(true);
+  }
+
+  closeAssistDrawer() {
+    this.assistDrawerOpen.set(false);
+  }
+
+  handleAssistAction(action: SuggestedAction) {
+    // Action is handled by the drawer component
+    // This is just for any additional page-specific logic if needed
+    console.log('Action triggered:', action);
+  }
   createWebhookCode = `POST /api/v1/webhooks
 Content-Type: application/json
 

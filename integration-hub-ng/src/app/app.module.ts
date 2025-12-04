@@ -20,7 +20,8 @@ import {
   CheckboxModule,
   ModalModule,
   TagModule,
-  TabsModule
+  TabsModule,
+  ToggleModule
 } from 'carbon-components-angular';
 
 import { AppComponent } from './app.component';
@@ -48,9 +49,15 @@ import { AiAssistantInsightsComponent } from './pages/ai-assistant-insights.comp
 import { AiAssistantInsightDetailComponent } from './pages/ai-assistant-insight-detail.component';
 import { AiAssistantWorkflowComponent } from './pages/ai-assistant-workflow.component';
 import { AiAssistantResolutionComponent } from './pages/ai-assistant-resolution.component';
+import { AiAssistantAgentModeComponent } from './pages/ai-assistant-agent-mode.component';
+import { AiAssistantAgentSummaryComponent } from './pages/ai-assistant-agent-summary.component';
+import { AgentStatusComponent } from './shared/components/agent-status/agent-status.component';
+import { AgentActivityLogComponent } from './shared/components/agent-activity-log/agent-activity-log.component';
+import { StepCorrectionModalComponent } from './shared/components/step-correction-modal/step-correction-modal.component';
 import { DataTableComponent } from './shared/components/data-table/data-table.component';
 import { AddVendorCompanyDrawerComponent } from './shared/components/add-vendor-company-drawer/add-vendor-company-drawer.component';
 import { AiChatDockComponent } from './shared/components/ai-chat-dock/ai-chat-dock.component';
+import { AiAssistDrawerComponent } from './shared/components/ai-assist-drawer/ai-assist-drawer.component';
 import { roleGuard } from './sys-admin/guards/role.guard';
 import {
   CompanyManagementDashboardPage,
@@ -99,6 +106,8 @@ const routes: Routes = [
           { path: 'insights/:id', component: AiAssistantInsightDetailComponent },
           { path: 'workflow/:id', component: AiAssistantWorkflowComponent },
           { path: 'resolution/:id', component: AiAssistantResolutionComponent },
+          { path: 'agent/:id', component: AiAssistantAgentModeComponent },
+          { path: 'agent-summary/:id', component: AiAssistantAgentSummaryComponent },
           { path: '', redirectTo: 'insights', pathMatch: 'full' }
         ]
       },
@@ -192,7 +201,9 @@ const routes: Routes = [
     AiAssistantInsightsComponent,
     AiAssistantInsightDetailComponent,
     AiAssistantWorkflowComponent,
-    AiAssistantResolutionComponent
+    AiAssistantResolutionComponent,
+    AiAssistantAgentModeComponent,
+    AiAssistantAgentSummaryComponent
   ],
   imports: [
     BrowserModule,
@@ -215,6 +226,7 @@ const routes: Routes = [
   CheckboxModule,
   ModalModule,
   TabsModule,
+  ToggleModule,
     LumenIconComponent,
     DataTableComponent,
     // Admin pages (standalone components)
@@ -234,6 +246,10 @@ const routes: Routes = [
     CodeBlockComponent,
     AddVendorCompanyDrawerComponent,
     AiChatDockComponent,
+    AiAssistDrawerComponent,
+    AgentStatusComponent,
+    AgentActivityLogComponent,
+    StepCorrectionModalComponent,
     RouterModule.forRoot(routes, { bindToComponentInputs: true }),
   ],
   providers: [],

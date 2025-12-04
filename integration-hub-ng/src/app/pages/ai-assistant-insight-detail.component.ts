@@ -26,12 +26,18 @@ import { AiAssistantService, Insight } from '../core/ai-assistant.service';
             <ibm-tag [type]="getSeverityType(insight()?.severity || 'low')" class="severity-tag-large">
               {{ insight()?.severity | titlecase }}
             </ibm-tag>
-            <button 
-              *ngIf="insight()?.workflowType && insight()?.status === 'active'"
-              ibmButton="primary" 
-              (click)="startWorkflow()">
-              Start Resolution Workflow
-            </button>
+            <div class="action-buttons" *ngIf="insight()?.workflowType && insight()?.status === 'active'">
+              <button 
+                ibmButton="secondary" 
+                (click)="startManualWorkflow()">
+                Start Manual Resolution
+              </button>
+              <button 
+                ibmButton="primary" 
+                (click)="startAgentMode()">
+                Let AI Handle It (Beta)
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -178,6 +184,11 @@ import { AiAssistantService, Insight } from '../core/ai-assistant.service';
       display: flex;
       gap: 1rem;
       align-items: center;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 0.75rem;
     }
 
     .severity-tag-large {
@@ -506,6 +517,20 @@ export class AiAssistantInsightDetailComponent implements OnInit {
     const insightId = this.route.snapshot.paramMap.get('id');
     if (insightId) {
       this.router.navigate(['/ai-assistant/workflow', insightId]);
+    }
+  }
+
+  startManualWorkflow() {
+    const insightId = this.route.snapshot.paramMap.get('id');
+    if (insightId) {
+      this.router.navigate(['/ai-assistant/workflow', insightId]);
+    }
+  }
+
+  startAgentMode() {
+    const insightId = this.route.snapshot.paramMap.get('id');
+    if (insightId) {
+      this.router.navigate(['/ai-assistant/agent', insightId]);
     }
   }
 }
