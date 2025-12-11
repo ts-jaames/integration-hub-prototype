@@ -673,17 +673,27 @@
   }
 }
 
-// Ensure Carbon modals appear above chat dock
+// Ensure Carbon modals appear above chat dock and have consistent dark styling
 ::ng-deep {
   .bx--modal-overlay,
   .cds--modal-overlay {
     z-index: 2000 !important;
+    background: rgba(0, 0, 0, 0.6) !important;
+    backdrop-filter: blur(4px);
   }
   
   .bx--modal-container,
   .cds--modal-container {
     z-index: 2001 !important;
     max-width: 700px !important;
+    background: #111417 !important;
+    border-radius: 12px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+  }
+
+  .bx--modal,
+  .cds--modal {
+    background: #111417 !important;
   }
 
   // Remove mask images from modal scroll content
@@ -691,5 +701,103 @@
   .cds--modal-scroll-content {
     mask-image: none !important;
     -webkit-mask-image: none !important;
+    background: #111417 !important;
+  }
+
+  // Modal header dark styling
+  .bx--modal-header,
+  .cds--modal-header {
+    background: #111417 !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .bx--modal-header__heading,
+  .cds--modal-header__heading {
+    color: #f5f5f5 !important;
+  }
+
+  // Modal content dark styling
+  [ibmModalContent],
+  .bx--modal-content,
+  .cds--modal-content {
+    background: #111417 !important;
+  }
+
+  // Modal footer dark styling
+  .bx--modal-footer,
+  .cds--modal-footer {
+    background: #111417 !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  // Input fields - dark theme with legible text
+  .bx--text-input,
+  .cds--text-input,
+  .bx--text-area,
+  .cds--text-area,
+  input[type="text"],
+  input[type="email"],
+  input[type="url"],
+  input[type="date"],
+  textarea {
+    background: #262626 !important;
+    border: 1px solid #404040 !important;
+    color: #f5f5f5 !important;
+  }
+
+  .bx--text-input::placeholder,
+  .cds--text-input::placeholder,
+  .bx--text-area::placeholder,
+  .cds--text-area::placeholder,
+  input::placeholder,
+  textarea::placeholder {
+    color: #737373 !important;
+  }
+
+  .bx--text-input:focus,
+  .cds--text-input:focus,
+  .bx--text-area:focus,
+  .cds--text-area:focus,
+  input:focus,
+  textarea:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+    background: #262626 !important;
+    color: #f5f5f5 !important;
+  }
+
+  // Select dropdowns
+  .bx--select-input,
+  .cds--select-input,
+  select {
+    background: #262626 !important;
+    border: 1px solid #404040 !important;
+    color: #f5f5f5 !important;
+  }
+
+  .bx--select-input:focus,
+  .cds--select-input:focus,
+  select:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+  }
+
+  // Labels
+  .bx--label,
+  .cds--label,
+  label {
+    color: #e5e5e5 !important;
+  }
+
+  // Close button
+  .bx--modal-close,
+  .cds--modal-close {
+    color: #d4d4d4 !important;
+  }
+
+  .bx--modal-close:hover,
+  .cds--modal-close:hover {
+    color: #f5f5f5 !important;
+    background: rgba(255, 255, 255, 0.1) !important;
   }
 }
