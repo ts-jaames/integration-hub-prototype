@@ -24,9 +24,19 @@ export class DataTableComponent {
   constructor(public elementRef: ElementRef) {}
 
   handleRowClick(event: any) {
+    // Carbon table rowClick event structure: { model, rowIndex, selectedRowIndex, ... }
+    // Ensure we pass through the event with proper structure
+    const rowClickEvent = {
+      ...event,
+      selectedRowIndex: event?.selectedRowIndex ?? event?.rowIndex ?? event?.index,
+      rowIndex: event?.rowIndex ?? event?.selectedRowIndex ?? event?.index,
+      model: event?.model,
+      event: event?.event || event
+    };
+    
     // Emit both events for compatibility
-    this.rowClick.emit(event);
-    this.onRowClick.emit(event);
+    this.rowClick.emit(rowClickEvent);
+    this.onRowClick.emit(rowClickEvent);
   }
 }
 

@@ -7,8 +7,9 @@ import {
   IconModule
 } from 'carbon-components-angular';
 import { AiAssistantService, Insight } from '../core/ai-assistant.service';
-import { AgentStatusComponent, AgentStep } from '../shared/components/agent-status/agent-status.component';
-import { AgentActivityLogComponent, AgentActivity } from '../shared/components/agent-activity-log/agent-activity-log.component';
+import { AgentStatusComponent, AgentStep as AgentStatusStep } from '../shared/components/agent-status/agent-status.component';
+import { AgentActivityLogComponent } from '../shared/components/agent-activity-log/agent-activity-log.component';
+import { AgentStep } from '../core/models/agent-resolution.model';
 
 @Component({
   selector: 'app-ai-assistant-agent-mode',
@@ -41,7 +42,7 @@ import { AgentActivityLogComponent, AgentActivity } from '../shared/components/a
         <app-agent-status [steps]="agentSteps"></app-agent-status>
 
         <!-- Activity Log -->
-        <app-agent-activity-log [activities]="activityLog"></app-agent-activity-log>
+        <app-agent-activity-log [steps]="activityLogSteps"></app-agent-activity-log>
 
         <!-- Success State -->
         <div *ngIf="isComplete()" class="completion-state">
@@ -235,8 +236,8 @@ export class AiAssistantAgentModeComponent implements OnInit {
 
   insight = signal<Insight | null>(null);
   loading = signal(true);
-  agentSteps = signal<AgentStep[]>([]);
-  activityLog = signal<AgentActivity[]>([]);
+  agentSteps = signal<AgentStatusStep[]>([]);
+  activityLogSteps = signal<AgentStep[]>([]);
   isComplete = signal(false);
 
   ngOnInit() {
@@ -257,24 +258,26 @@ export class AiAssistantAgentModeComponent implements OnInit {
   }
 
   startAgentWorkflow(insight: Insight) {
-    // Initialize steps
-    const steps: AgentStep[] = [
+    // Initialize status steps (for AgentStatusComponent)
+    const statusSteps: AgentStatusStep[] = [
       { id: '1', label: 'Reviewing credential usage', status: 'pending' },
       { id: '2', label: 'Generating replacement credential', status: 'pending' },
       { id: '3', label: 'Updating affected integrations', status: 'pending' },
       { id: '4', label: 'Verifying connection health', status: 'pending' },
       { id: '5', label: 'Preparing revocation of old credential', status: 'pending' }
     ];
-    this.agentSteps.set(steps);
+    this.agentSteps.set(statusSteps);
 
-    // Add initial log entry
-    this.addActivity({
-      id: '1',
-      timestamp: new Date().toISOString(),
-      action: 'Agent started resolution workflow',
-      details: `Beginning automated resolution for: ${insight.title}`,
-      status: 'info',
-      metadata: { insightId: insight.id, workflowType: insight.workflowType }
+    // Add initial log entry as AgentStep
+    const initialTimestamp = new Date().toISOString();
+    this.addActivityStep({
+      id: 'workflow-start',
+      index: 0,
+      label: 'Agent started resolution workflow',
+      status: 'started',
+      message: `Beginning automated resolution for: ${insight.title}`,
+      timestamp: initialTimestamp,
+      type: 'info'
     });
 
     // Execute steps sequentially
@@ -290,16 +293,21 @@ export class AiAssistantAgentModeComponent implements OnInit {
 
     const step = steps[stepIndex];
     const startTime = Date.now();
+    const startTimestamp = new Date().toISOString();
 
-    // Mark step as running
+    // Mark step as running (for status component)
     steps[stepIndex] = { ...step, status: 'running' };
     this.agentSteps.set(steps);
 
-    this.addActivity({
+    // Add started step to activity log
+    this.addActivityStep({
       id: `step-${stepIndex}-start`,
-      timestamp: new Date().toISOString(),
-      action: `Starting: ${step.label}`,
-      status: 'info'
+      index: stepIndex + 1,
+      label: `Starting: ${step.label}`,
+      status: 'started',
+      message: `Beginning execution of: ${step.label}`,
+      timestamp: startTimestamp,
+      type: 'info'
     });
 
     // Simulate step execution (1-2 seconds)
@@ -308,8 +316,9 @@ export class AiAssistantAgentModeComponent implements OnInit {
     setTimeout(() => {
       const endTime = Date.now();
       const actualDuration = endTime - startTime;
+      const endTimestamp = new Date().toISOString();
 
-      // Mark step as completed
+      // Mark step as completed (for status component)
       const updatedSteps = [...this.agentSteps()];
       updatedSteps[stepIndex] = {
         ...step,
@@ -319,14 +328,17 @@ export class AiAssistantAgentModeComponent implements OnInit {
       };
       this.agentSteps.set(updatedSteps);
 
-      // Add completion log
-      this.addActivity({
+      // Add completion step to activity log
+      const resultMessage = this.getStepResult(stepIndex);
+      this.addActivityStep({
         id: `step-${stepIndex}-complete`,
-        timestamp: new Date().toISOString(),
-        action: `Completed: ${step.label}`,
-        details: this.getStepResult(stepIndex),
-        status: 'success',
-        metadata: { duration: `${actualDuration}ms` }
+        index: stepIndex + 1,
+        label: `Completed: ${step.label}`,
+        status: 'completed',
+        message: resultMessage,
+        timestamp: endTimestamp,
+        durationMs: actualDuration,
+        type: 'success'
       });
 
       // Move to next step
@@ -347,19 +359,20 @@ export class AiAssistantAgentModeComponent implements OnInit {
     return results[stepIndex] || 'Step completed successfully';
   }
 
-  addActivity(activity: AgentActivity) {
-    this.activityLog.update(log => [...log, activity]);
+  addActivityStep(step: AgentStep) {
+    this.activityLogSteps.update(log => [...log, step]);
   }
 
   completeWorkflow() {
     this.isComplete.set(true);
-    this.addActivity({
+    this.addActivityStep({
       id: 'workflow-complete',
+      index: this.agentSteps().length + 1,
+      label: 'Resolution workflow completed successfully',
+      status: 'completed',
+      message: 'All steps completed without errors. The insight has been resolved.',
       timestamp: new Date().toISOString(),
-      action: 'Resolution workflow completed successfully',
-      details: 'All steps completed without errors. The insight has been resolved.',
-      status: 'success',
-      metadata: { totalSteps: this.agentSteps().length }
+      type: 'success'
     });
 
     // Resolve the insight

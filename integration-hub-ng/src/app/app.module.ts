@@ -54,6 +54,14 @@ import { AiAssistantAgentSummaryComponent } from './pages/ai-assistant-agent-sum
 import { AgentStatusComponent } from './shared/components/agent-status/agent-status.component';
 import { AgentActivityLogComponent } from './shared/components/agent-activity-log/agent-activity-log.component';
 import { StepCorrectionModalComponent } from './shared/components/step-correction-modal/step-correction-modal.component';
+import { VendorLifecycleStepperComponent } from './shared/components/vendor-lifecycle-stepper/vendor-lifecycle-stepper.component';
+import { VendorOnboardingWizardComponent } from './shared/components/vendor-onboarding-wizard/vendor-onboarding-wizard.component';
+import { VendorSummaryCardComponent } from './shared/components/vendor-summary-card/vendor-summary-card.component';
+import { VendorComplianceSectionComponent } from './shared/components/vendor-compliance-section/vendor-compliance-section.component';
+import { VendorUsersSectionComponent } from './shared/components/vendor-users-section/vendor-users-section.component';
+import { VendorApiKeysSectionComponent } from './shared/components/vendor-api-keys-section/vendor-api-keys-section.component';
+import { VendorActivityLogSectionComponent } from './shared/components/vendor-activity-log-section/vendor-activity-log-section.component';
+import { ConfirmDialogComponent } from './shared/components/confirm-dialog/confirm-dialog.component';
 import { DataTableComponent } from './shared/components/data-table/data-table.component';
 import { AddVendorCompanyDrawerComponent } from './shared/components/add-vendor-company-drawer/add-vendor-company-drawer.component';
 import { AiChatDockComponent } from './shared/components/ai-chat-dock/ai-chat-dock.component';
@@ -96,6 +104,7 @@ const routes: Routes = [
   { path: 'usage-analytics', component: UsageAnalyticsComponent },
   { path: 'platform-settings', component: PlatformSettingsComponent },
   { path: 'support-tickets', component: SupportTicketsComponent },
+      { path: 'vendors', redirectTo: 'vendors/companies', pathMatch: 'full' },
       { path: 'vendors/companies', component: CompanyDirectoryComponent },
       { path: 'vendors/companies/:id', component: CompanyDetailsComponent },
       { path: 'vendors/onboarding', component: OnboardingQueueComponent },
@@ -250,6 +259,14 @@ const routes: Routes = [
     AgentStatusComponent,
     AgentActivityLogComponent,
     StepCorrectionModalComponent,
+    VendorLifecycleStepperComponent,
+    VendorOnboardingWizardComponent,
+    VendorSummaryCardComponent,
+    VendorComplianceSectionComponent,
+    VendorUsersSectionComponent,
+    VendorApiKeysSectionComponent,
+    VendorActivityLogSectionComponent,
+    ConfirmDialogComponent,
     RouterModule.forRoot(routes, { bindToComponentInputs: true }),
   ],
   providers: [],

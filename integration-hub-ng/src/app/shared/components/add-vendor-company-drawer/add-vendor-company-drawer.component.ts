@@ -62,24 +62,48 @@ interface VendorCompanyFormData {
             <div class="form-grid">
               <div class="form-field full-width">
                 <label class="form-label">
-                  Company name <span class="required">*</span>
+                  Vendor Name <span class="required">*</span>
                 </label>
                 <input
                   ibmText
                   formControlName="companyName"
                   placeholder="Acme Integrations, Inc."
-                  [class.error]="isFieldInvalid('companyName')">
+                  [class.error]="isFieldInvalid('companyName') || duplicateWarning()">
                 <div class="error-message" *ngIf="isFieldInvalid('companyName')">
-                  Company name is required.
+                  Vendor name is required.
+                </div>
+                <div class="warning-message" *ngIf="duplicateWarning() && !isFieldInvalid('companyName')">
+                  ⚠️ Potential duplicate vendor detected. Please verify this is a new vendor.
                 </div>
               </div>
 
               <div class="form-field">
-                <label class="form-label">Legal name</label>
+                <label class="form-label">DBA (Doing Business As)</label>
                 <input
                   ibmText
-                  formControlName="legalName"
-                  placeholder="Acme Integrations, Inc.">
+                  formControlName="dba"
+                  placeholder="Acme">
+              </div>
+
+              <div class="form-field">
+                <label class="form-label">Category</label>
+                <select ibmSelect formControlName="category">
+                  <option value="">Select category</option>
+                  <option value="Payment">Payment</option>
+                  <option value="Operations">Operations</option>
+                  <option value="Data Provider">Data Provider</option>
+                  <option value="Software Vendor">Software Vendor</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div class="form-field full-width">
+                <label class="form-label">Purpose / Description</label>
+                <textarea
+                  ibmText
+                  formControlName="purpose"
+                  rows="3"
+                  placeholder="High-level description of vendor purpose and integration needs"></textarea>
               </div>
 
               <div class="form-field">
@@ -193,11 +217,21 @@ interface VendorCompanyFormData {
                   type="email"
                   formControlName="primaryContactEmail"
                   placeholder="john.smith@example.com"
-                  [class.error]="isFieldInvalid('primaryContactEmail')">
+                  [class.error]="isFieldInvalid('primaryContactEmail') || duplicateWarning()">
                 <div class="error-message" *ngIf="isFieldInvalid('primaryContactEmail')">
                   <span *ngIf="form.get('primaryContactEmail')?.hasError('required')">Primary contact email is required.</span>
                   <span *ngIf="form.get('primaryContactEmail')?.hasError('email')">Enter a valid email address.</span>
                 </div>
+                <div class="warning-message" *ngIf="duplicateWarning() && !isFieldInvalid('primaryContactEmail')">
+                  ⚠️ This email is already associated with another vendor.
+                </div>
+              </div>
+              <div class="form-field">
+                <label class="form-label">Primary contact phone</label>
+                <input
+                  ibmText
+                  formControlName="primaryContactPhone"
+                  placeholder="+1-555-0100">
               </div>
               <div class="form-field">
                 <label class="form-label">Primary contact role</label>
@@ -540,6 +574,15 @@ interface VendorCompanyFormData {
       gap: 0.75rem;
     }
 
+    .warning-message {
+      font-size: 0.75rem;
+      color: #f59e0b;
+      margin-top: 0.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
     // Error state styling
     ::ng-deep {
       .error {
@@ -558,6 +601,7 @@ export class AddVendorCompanyDrawerComponent implements OnInit, OnDestroy {
 
   form!: FormGroup;
   saving = signal(false);
+  duplicateWarning = signal(false);
   private destroy$ = new Subject<void>();
 
   integrationModes = ['APIs', 'File-based', 'Events'];
@@ -598,8 +642,11 @@ export class AddVendorCompanyDrawerComponent implements OnInit, OnDestroy {
 
     this.form = this.fb.group({
       companyName: ['', Validators.required],
+      dba: [''],
       legalName: [''],
       vendorType: ['', Validators.required],
+      category: [''],
+      purpose: [''],
       externalVendorId: [''],
       isActive: [true],
       ...integrationModeControls,
@@ -607,6 +654,7 @@ export class AddVendorCompanyDrawerComponent implements OnInit, OnDestroy {
       ...environmentControls,
       primaryContactName: ['', Validators.required],
       primaryContactEmail: ['', [Validators.required, Validators.email]],
+      primaryContactPhone: [''],
       primaryContactRole: [''],
       technicalContactName: [''],
       technicalContactEmail: ['', Validators.email],
@@ -618,6 +666,36 @@ export class AddVendorCompanyDrawerComponent implements OnInit, OnDestroy {
       notes: ['']
     }, {
       validators: [this.environmentsValidator.bind(this)]
+    });
+
+    // Set up duplicate detection
+    this.form.get('companyName')?.valueChanges.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(() => this.checkDuplicate());
+
+    this.form.get('primaryContactEmail')?.valueChanges.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(() => this.checkDuplicate());
+  }
+
+  checkDuplicate() {
+    const name = this.form.get('companyName')?.value;
+    const email = this.form.get('primaryContactEmail')?.value;
+
+    if (!name && !email) {
+      this.duplicateWarning.set(false);
+      return;
+    }
+
+    this.vendorCompanyService.checkDuplicate(name || '', email || '').pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (result) => {
+        this.duplicateWarning.set(result.isDuplicate);
+      },
+      error: () => {
+        this.duplicateWarning.set(false);
+      }
     });
   }
 
@@ -652,6 +730,8 @@ export class AddVendorCompanyDrawerComponent implements OnInit, OnDestroy {
   }
 
   onClose() {
+    this.form.reset();
+    this.duplicateWarning.set(false);
     this.closed.emit();
   }
 
@@ -671,8 +751,11 @@ export class AddVendorCompanyDrawerComponent implements OnInit, OnDestroy {
     
     return {
       companyName: value.companyName,
+      dba: value.dba || undefined,
       legalName: value.legalName || undefined,
       vendorType: value.vendorType,
+      category: value.category || undefined,
+      purpose: value.purpose || undefined,
       externalVendorId: value.externalVendorId || undefined,
       isActive: value.isActive,
       integrationModes: this.integrationModes.filter(mode => value[`integrationMode_${mode}`]),
@@ -680,6 +763,7 @@ export class AddVendorCompanyDrawerComponent implements OnInit, OnDestroy {
       environments: this.environments.filter(env => value[`environment_${env}`]),
       primaryContactName: value.primaryContactName,
       primaryContactEmail: value.primaryContactEmail,
+      primaryContactPhone: value.primaryContactPhone || undefined,
       primaryContactRole: value.primaryContactRole || undefined,
       technicalContactName: value.technicalContactName || undefined,
       technicalContactEmail: value.technicalContactEmail || undefined,

@@ -101,6 +101,7 @@
 
       tr {
         transition: background 150ms ease !important;
+        cursor: pointer !important;
 
         &:nth-child(odd) {
           background: transparent !important;

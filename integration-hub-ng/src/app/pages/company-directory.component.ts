@@ -13,9 +13,11 @@ import {
   ModalModule,
   SelectModule
 } from 'carbon-components-angular';
-import { VendorCompany } from '../shared/models/vendor-company.model';
+import { VendorCompany, VendorStatus, VendorComplianceState, VendorOnboardingPhase } from '../shared/models/vendor-company.model';
 import { DataTableComponent } from '../shared/components/data-table/data-table.component';
 import { AddVendorCompanyDrawerComponent } from '../shared/components/add-vendor-company-drawer/add-vendor-company-drawer.component';
+import { VendorOnboardingWizardComponent } from '../shared/components/vendor-onboarding-wizard/vendor-onboarding-wizard.component';
+import { VendorCompanyService } from '../shared/services/vendor-company.service';
 
 @Component({
   selector: 'app-company-directory',
@@ -27,14 +29,17 @@ import { AddVendorCompanyDrawerComponent } from '../shared/components/add-vendor
           <h1>Vendor Companies</h1>
           <p class="page-subtitle">Manage all vendor entities in the platform.</p>
         </div>
-        <button ibmButton="primary" (click)="openNewCompanyModal()">New Company</button>
+        <div class="header-actions">
+          <button ibmButton="secondary" (click)="openOnboardingWizard()">New Vendor Onboarding</button>
+          <button ibmButton="primary" (click)="openNewCompanyModal()">New Company</button>
+        </div>
       </div>
 
       <div class="toolbar">
         <div class="search-input">
           <input
             ibmText
-            placeholder="Search companies..."
+            placeholder="Search by name, DBA, or email..."
             [(ngModel)]="searchQuery"
             (ngModelChange)="onSearchChange()">
         </div>
@@ -48,20 +53,28 @@ import { AddVendorCompanyDrawerComponent } from '../shared/components/add-vendor
         </div>
 
         <div class="filter-group">
-          <label class="filter-label">Tier:</label>
-          <select ibmSelect [(ngModel)]="selectedTier" (ngModelChange)="onSearchChange()" class="filter-select">
+          <label class="filter-label">Compliance:</label>
+          <select ibmSelect [(ngModel)]="selectedComplianceState" (ngModelChange)="onSearchChange()" class="filter-select">
             <option value="">All</option>
-            <option value="Tier 1">Tier 1</option>
-            <option value="Tier 2">Tier 2</option>
-            <option value="Tier 3">Tier 3</option>
+            <option *ngFor="let state of complianceStateOptions" [value]="state">{{ state }}</option>
           </select>
         </div>
 
         <div class="filter-group">
-          <label class="filter-label">Risk Level:</label>
-          <select ibmSelect [(ngModel)]="selectedRiskLevel" (ngModelChange)="onSearchChange()" class="filter-select">
+          <label class="filter-label">Onboarding:</label>
+          <select ibmSelect [(ngModel)]="selectedOnboardingPhase" (ngModelChange)="onSearchChange()" class="filter-select">
             <option value="">All</option>
-            <option *ngFor="let risk of riskOptions" [value]="risk">{{ risk }}</option>
+            <option *ngFor="let phase of onboardingPhaseOptions" [value]="phase">{{ phase }}</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label class="filter-label">Sort by:</label>
+          <select ibmSelect [(ngModel)]="sortBy" (ngModelChange)="onSearchChange()" class="filter-select">
+            <option value="name">Name (A-Z)</option>
+            <option value="name-desc">Name (Z-A)</option>
+            <option value="updated">Last Updated</option>
+            <option value="status">Status</option>
           </select>
         </div>
       </div>
@@ -82,6 +95,13 @@ import { AddVendorCompanyDrawerComponent } from '../shared/components/add-vendor
       (closed)="closeDrawer()"
       (saved)="onVendorCompanySaved($event)">
     </app-add-vendor-company-drawer>
+
+    <!-- Vendor Onboarding Wizard -->
+    <app-vendor-onboarding-wizard
+      [open]="wizardOpen()"
+      (closed)="closeWizard()"
+      (completed)="onOnboardingCompleted($event)">
+    </app-vendor-onboarding-wizard>
 
     <!-- Edit Modal -->
     <ibm-modal
@@ -133,6 +153,12 @@ import { AddVendorCompanyDrawerComponent } from '../shared/components/add-vendor
       margin: 0;
     }
 
+    .header-actions {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+    }
+
     .toolbar {
       display: flex;
       gap: 1rem;
@@ -167,6 +193,24 @@ import { AddVendorCompanyDrawerComponent } from '../shared/components/add-vendor
       // No border - matching Recent Activity table aesthetic
     }
 
+    .table-note {
+      margin-bottom: 1rem;
+      padding: 0.75rem 1rem;
+      background: var(--linear-surface);
+      border: 1px solid var(--linear-border);
+      border-radius: 6px;
+      font-size: 0.875rem;
+      color: var(--linear-text-secondary);
+    }
+
+    .table-note code {
+      background: rgba(0, 0, 0, 0.05);
+      padding: 0.125rem 0.375rem;
+      border-radius: 3px;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 0.8125rem;
+    }
+
     .table-actions-hint {
       padding: 0.75rem 1rem;
       background: var(--linear-surface);
@@ -189,155 +233,107 @@ import { AddVendorCompanyDrawerComponent } from '../shared/components/add-vendor
 })
 export class CompanyDirectoryComponent implements OnInit {
   private router = inject(Router);
+  private vendorService = inject(VendorCompanyService);
 
   loading = signal(false);
-  companies: VendorCompany[] = [];
+  companies = signal<VendorCompany[]>([]);
   searchQuery = '';
   selectedStatus = '';
-  selectedTier = '';
-  selectedRiskLevel = '';
+  selectedComplianceState = '';
+  selectedOnboardingPhase = '';
+  sortBy = 'name';
   editModalOpen = signal(false);
   selectedCompany = signal<VendorCompany | null>(null);
   drawerOpen = signal(false);
+  wizardOpen = signal(false);
 
-  statusOptions = ['Pending', 'Active', 'Rejected', 'Deactivated'];
-  riskOptions = ['Low', 'Medium', 'High'];
+  statusOptions: VendorStatus[] = ['Pending', 'Approved', 'Rejected', 'Archived'];
+  complianceStateOptions: VendorComplianceState[] = ['Complete', 'Missing Docs', 'Expired'];
+  onboardingPhaseOptions: VendorOnboardingPhase[] = ['New', 'In Review', 'Ready', 'Blocked'];
 
   tableModel = new TableModel();
 
   get filteredCompanies(): VendorCompany[] {
-    let filtered = [...this.companies];
+    let filtered = [...this.companies()];
     
+    // Search by name, DBA, or email
     if (this.searchQuery) {
       const query = this.searchQuery.toLowerCase();
       filtered = filtered.filter(c => 
         c.name.toLowerCase().includes(query) || 
-        c.primaryContact.toLowerCase().includes(query) ||
+        (c.dba && c.dba.toLowerCase().includes(query)) ||
         c.primaryEmail.toLowerCase().includes(query)
       );
     }
     
+    // Filter by status
     if (this.selectedStatus) {
       filtered = filtered.filter(c => c.status === this.selectedStatus);
     }
     
-    if (this.selectedTier) {
-      filtered = filtered.filter(c => c.tier === this.selectedTier);
+    // Filter by compliance state
+    if (this.selectedComplianceState) {
+      filtered = filtered.filter(c => {
+        if (!c.complianceState) return false;
+        return c.complianceState === this.selectedComplianceState;
+      });
     }
     
-    if (this.selectedRiskLevel) {
-      filtered = filtered.filter(c => c.riskLevel === this.selectedRiskLevel);
+    // Filter by onboarding phase
+    if (this.selectedOnboardingPhase) {
+      filtered = filtered.filter(c => {
+        if (!c.onboardingPhase) return false;
+        return c.onboardingPhase === this.selectedOnboardingPhase;
+      });
     }
+    
+    // Sort
+    filtered.sort((a, b) => {
+      switch (this.sortBy) {
+        case 'name':
+          return a.name.localeCompare(b.name);
+        case 'name-desc':
+          return b.name.localeCompare(a.name);
+        case 'updated':
+          return new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime();
+        case 'status':
+          return a.status.localeCompare(b.status);
+        default:
+          return 0;
+      }
+    });
     
     return filtered;
   }
 
   ngOnInit() {
-    this.loadMockData();
+    this.loadVendors();
     this.buildTable();
   }
 
-  loadMockData() {
-    this.companies = [
-      {
-        id: '1',
-        name: 'Acme Corporation',
-        primaryContact: 'John Smith',
-        primaryEmail: 'john.smith@acme.com',
-        status: 'Active',
-        tier: 'Tier 1',
-        riskLevel: 'Low',
-        createdAt: '2024-01-15T10:00:00Z',
-        website: 'https://acme.com',
-        address: '123 Main St, San Francisco, CA',
-        vendor: true
+  loadVendors() {
+    this.loading.set(true);
+    this.vendorService.getVendors().subscribe({
+      next: (vendors) => {
+        this.companies.set(vendors);
+        this.updateTableData();
+        this.loading.set(false);
       },
-      {
-        id: '2',
-        name: 'TechStart Inc',
-        primaryContact: 'Sarah Johnson',
-        primaryEmail: 'sarah.j@techstart.com',
-        status: 'Pending',
-        tier: 'Tier 2',
-        riskLevel: 'Medium',
-        createdAt: '2024-02-20T14:30:00Z',
-        submittedAt: '2024-02-20T14:30:00Z',
-        website: 'https://techstart.com',
-        vendor: true
-      },
-      {
-        id: '3',
-        name: 'Global Solutions Ltd',
-        primaryContact: 'Michael Chen',
-        primaryEmail: 'm.chen@globalsolutions.com',
-        status: 'Active',
-        tier: 'Tier 1',
-        riskLevel: 'Low',
-        createdAt: '2023-11-10T09:15:00Z',
-        website: 'https://globalsolutions.com',
-        address: '456 Business Ave, New York, NY',
-        vendor: true
-      },
-      {
-        id: '4',
-        name: 'InnovateCo',
-        primaryContact: 'Emily Davis',
-        primaryEmail: 'emily.d@innovateco.com',
-        status: 'Pending',
-        tier: 'Tier 3',
-        riskLevel: 'High',
-        createdAt: '2024-03-05T11:20:00Z',
-        submittedAt: '2024-03-05T11:20:00Z',
-        website: 'https://innovateco.com',
-        vendor: true
-      },
-      {
-        id: '5',
-        name: 'DataFlow Systems',
-        primaryContact: 'Robert Wilson',
-        primaryEmail: 'r.wilson@dataflow.com',
-        status: 'Active',
-        tier: 'Tier 2',
-        riskLevel: 'Medium',
-        createdAt: '2024-01-28T16:45:00Z',
-        website: 'https://dataflow.com',
-        address: '789 Tech Blvd, Austin, TX',
-        vendor: true
-      },
-      {
-        id: '6',
-        name: 'CloudVendor Pro',
-        primaryContact: 'Lisa Anderson',
-        primaryEmail: 'lisa.a@cloudvendor.com',
-        status: 'Rejected',
-        tier: 'Tier 3',
-        riskLevel: 'High',
-        createdAt: '2024-02-10T13:00:00Z',
-        submittedAt: '2024-02-10T13:00:00Z',
-        vendor: true
-      },
-      {
-        id: '7',
-        name: 'SecureNet Partners',
-        primaryContact: 'David Martinez',
-        primaryEmail: 'd.martinez@securenet.com',
-        status: 'Deactivated',
-        tier: 'Tier 1',
-        riskLevel: 'Low',
-        createdAt: '2023-09-15T08:30:00Z',
-        website: 'https://securenet.com',
-        vendor: true
+      error: (err) => {
+        console.error('Error loading vendors:', err);
+        this.loading.set(false);
       }
-    ];
+    });
   }
 
   buildTable() {
     this.tableModel.header = [
-      new TableHeaderItem({ data: 'Company Name' }),
+      new TableHeaderItem({ data: 'Vendor Name' }),
+      new TableHeaderItem({ data: 'DBA' }),
       new TableHeaderItem({ data: 'Status' }),
-      new TableHeaderItem({ data: 'Tier' }),
-      new TableHeaderItem({ data: 'Risk Level' }),
-      new TableHeaderItem({ data: 'Date Registered' })
+      new TableHeaderItem({ data: 'Compliance' }),
+      new TableHeaderItem({ data: 'Readiness' }),
+      new TableHeaderItem({ data: 'Last Updated' })
     ];
 
     this.updateTableData();
@@ -345,13 +341,22 @@ export class CompanyDirectoryComponent implements OnInit {
 
   updateTableData() {
     const filtered = this.filteredCompanies;
-    this.tableModel.data = filtered.map((company) => [
-      new TableItem({ data: company.name }),
-      new TableItem({ data: company.status }),
-      new TableItem({ data: company.tier || 'N/A' }),
-      new TableItem({ data: company.riskLevel }),
-      new TableItem({ data: this.formatDate(company.createdAt) })
-    ]);
+    this.tableModel.data = filtered.map((company, index) => {
+      // Store company ID in the first cell's expandedData for easy retrieval
+      const firstCell = new TableItem({ 
+        data: company.name, 
+        expandedData: company.id,
+        rawData: { companyId: company.id, index: index }
+      });
+      return [
+        firstCell,
+        new TableItem({ data: company.dba || '—' }),
+        new TableItem({ data: company.status }),
+        new TableItem({ data: company.complianceState || '—' }),
+        new TableItem({ data: company.readiness || '—' }),
+        new TableItem({ data: this.formatDate(company.updatedAt || company.createdAt) })
+      ];
+    });
   }
 
   formatDate(dateString: string): string {
@@ -368,15 +373,56 @@ export class CompanyDirectoryComponent implements OnInit {
   }
 
   onRowClick(event: any) {
-    const rowIndex = event.selectedRowIndex;
-    const company = this.filteredCompanies[rowIndex];
-    if (company) {
-      // Right-click or Ctrl+Click for edit, regular click for view
-      if (event.event?.ctrlKey || event.event?.button === 2) {
-        this.editCompany(rowIndex);
-      } else {
-        this.router.navigate(['/vendors/companies', company.id]);
+    let companyId: string | null = null;
+    let company: VendorCompany | null = null;
+    
+    // Method 1: Try to get company ID from the first cell's expandedData
+    const rowIndex = event?.selectedRowIndex ?? event?.rowIndex ?? event?.index;
+    if (rowIndex !== undefined && rowIndex !== null && rowIndex >= 0) {
+      // Try to get from model data
+      if (event?.model?.data && Array.isArray(event.model.data) && event.model.data[rowIndex]) {
+        const rowData = event.model.data[rowIndex];
+        if (Array.isArray(rowData) && rowData.length > 0) {
+          const firstCell = rowData[0];
+          if (firstCell?.expandedData) {
+            companyId = firstCell.expandedData;
+          } else if (firstCell?.rawData?.companyId) {
+            companyId = firstCell.rawData.companyId;
+          }
+        }
       }
+      
+      // Fallback: use rowIndex with filteredCompanies
+      if (!companyId) {
+        const filtered = this.filteredCompanies;
+        if (rowIndex < filtered.length) {
+          company = filtered[rowIndex];
+          if (company) {
+            companyId = company.id;
+          }
+        }
+      }
+    }
+    
+    // Method 2: Try to get company directly if we have the ID
+    if (companyId && !company) {
+      company = this.filteredCompanies.find(c => c.id === companyId) || null;
+    }
+    
+    if (company && companyId) {
+      // Right-click or Ctrl+Click for edit, regular click for view
+      const clickEvent = event?.event || event;
+      if (clickEvent?.ctrlKey || clickEvent?.button === 2) {
+        this.selectedCompany.set(company);
+        this.editModalOpen.set(true);
+      } else {
+        // Navigate to vendor detail page
+        this.router.navigate(['/vendors/companies', companyId]);
+      }
+    } else {
+      console.error('Could not determine company from row click event:', event);
+      console.error('Row index:', rowIndex);
+      console.error('Filtered companies count:', this.filteredCompanies.length);
     }
   }
 
@@ -421,11 +467,26 @@ export class CompanyDirectoryComponent implements OnInit {
     this.drawerOpen.set(false);
   }
 
+  openOnboardingWizard() {
+    this.wizardOpen.set(true);
+  }
+
+  closeWizard() {
+    this.wizardOpen.set(false);
+  }
+
+  onOnboardingCompleted(data: any) {
+    console.log('Onboarding completed:', data);
+    // In a real app, this would create the vendor company with lifecycle data
+    alert('Vendor onboarding completed! (Demo only - data not saved)');
+    // You could navigate to the new company detail page here
+    // this.router.navigate(['/vendors/companies', newCompanyId]);
+  }
+
   onVendorCompanySaved(data: any) {
     console.log('Vendor company saved from drawer:', data);
-    // In a real app, you would refresh the table or add the new company to the list
-    // For demo purposes, we'll just log it
-    this.updateTableData();
+    // Reload vendors to get the new one
+    this.loadVendors();
   }
 }
 
