@@ -420,6 +420,7 @@ interface Alert {
       font-weight: 400;
       color: var(--linear-text-secondary);
       margin: 0;
+      padding-top: 0;
     }
     
     .section-filters {

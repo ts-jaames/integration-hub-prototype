@@ -348,7 +348,7 @@ export class VendorComplianceSectionComponent implements OnInit, OnChanges {
 
     // Check if the click was on the action column (last column)
     const clickedColumn = event?.columnIndex ?? event?.colIndex;
-    const actionCell = rowData[rowData.length - 1];
+    const actionCell = rowData[rowData.length - 1] as any;
     
     if (actionCell?.rawData?.isAction && actionCell?.rawData?.docId) {
       this.onRemoveDocument(actionCell.rawData.docId);
