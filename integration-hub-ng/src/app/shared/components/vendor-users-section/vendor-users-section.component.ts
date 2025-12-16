@@ -316,7 +316,7 @@ export class VendorUsersSectionComponent implements OnInit, OnChanges {
     if (!rowData || !Array.isArray(rowData)) return;
 
     // Check if the click was on the action column (last column)
-    const actionCell = rowData[rowData.length - 1];
+    const actionCell = rowData[rowData.length - 1] as any;
     
     if (actionCell?.rawData?.isAction && actionCell?.rawData?.userId) {
       this.onRemoveUser(actionCell.rawData.userId);

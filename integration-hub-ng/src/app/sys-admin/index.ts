@@ -11,7 +11,6 @@ export * from './guards/role.guard';
 // Shared Components
 export * from './shared/components/status-tag/status-tag.component';
 export * from './shared/components/table-empty-state/table-empty-state.component';
-export * from './shared/components/confirm-dialog/confirm-dialog.component';
 export * from './shared/components/right-rail-anchors/right-rail-anchors.component';
 
 // Shared Pipes

@@ -7,8 +7,11 @@ import { VendorCompanyService } from '../../services/vendor-company.service';
 
 interface VendorCompanyFormData {
   companyName: string;
+  dba?: string;
   legalName?: string;
   vendorType: string;
+  category?: string;
+  purpose?: string;
   externalVendorId?: string;
   isActive: boolean;
   integrationModes: string[];
@@ -16,6 +19,7 @@ interface VendorCompanyFormData {
   environments: string[];
   primaryContactName: string;
   primaryContactEmail: string;
+  primaryContactPhone?: string;
   primaryContactRole?: string;
   technicalContactName?: string;
   technicalContactEmail?: string;

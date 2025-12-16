@@ -208,7 +208,7 @@ export class OnboardingQueueComponent implements OnInit {
     } else if (filter === 'new') {
       return this.companies.filter(c => c.status === 'Pending');
     } else if (filter === 'approved') {
-      return this.companies.filter(c => c.status === 'Active');
+      return this.companies.filter(c => c.status === 'Approved');
     } else {
       return this.companies.filter(c => c.status === 'Rejected');
     }
@@ -230,6 +230,7 @@ export class OnboardingQueueComponent implements OnInit {
         tier: 'Tier 2',
         riskLevel: 'Medium',
         createdAt: '2024-02-20T14:30:00Z',
+        updatedAt: '2024-02-20T14:30:00Z',
         submittedAt: '2024-02-20T14:30:00Z',
         website: 'https://techstart.com',
         notes: 'New startup company, requires review',
@@ -244,6 +245,7 @@ export class OnboardingQueueComponent implements OnInit {
         tier: 'Tier 3',
         riskLevel: 'High',
         createdAt: '2024-03-05T11:20:00Z',
+        updatedAt: '2024-03-05T11:20:00Z',
         submittedAt: '2024-03-05T11:20:00Z',
         website: 'https://innovateco.com',
         notes: 'High-risk vendor, needs additional verification',
@@ -258,6 +260,7 @@ export class OnboardingQueueComponent implements OnInit {
         tier: 'Tier 1',
         riskLevel: 'Low',
         createdAt: '2024-03-10T09:00:00Z',
+        updatedAt: '2024-03-10T09:00:00Z',
         submittedAt: '2024-03-10T09:00:00Z',
         website: 'https://nextgen.com',
         address: '100 Innovation Drive, Seattle, WA',
@@ -272,6 +275,7 @@ export class OnboardingQueueComponent implements OnInit {
         tier: 'Tier 2',
         riskLevel: 'Medium',
         createdAt: '2024-03-12T15:30:00Z',
+        updatedAt: '2024-03-12T15:30:00Z',
         submittedAt: '2024-03-12T15:30:00Z',
         website: 'https://cloudfirst.com',
         vendor: true
@@ -285,6 +289,7 @@ export class OnboardingQueueComponent implements OnInit {
         tier: 'Tier 3',
         riskLevel: 'High',
         createdAt: '2024-02-10T13:00:00Z',
+        updatedAt: '2024-02-10T13:00:00Z',
         submittedAt: '2024-02-10T13:00:00Z',
         notes: 'Rejected due to compliance concerns',
         vendor: true
@@ -341,7 +346,7 @@ export class OnboardingQueueComponent implements OnInit {
   approveApplication() {
     const company = this.selectedCompany();
     if (company) {
-      company.status = 'Active';
+      company.status = 'Approved';
       this.updateTableData();
       this.closeDetailsModal();
       alert('Vendor approved (demo only)');

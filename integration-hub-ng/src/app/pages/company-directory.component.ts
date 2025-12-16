@@ -18,6 +18,10 @@ import { DataTableComponent } from '../shared/components/data-table/data-table.c
 import { AddVendorCompanyDrawerComponent } from '../shared/components/add-vendor-company-drawer/add-vendor-company-drawer.component';
 import { VendorOnboardingWizardComponent } from '../shared/components/vendor-onboarding-wizard/vendor-onboarding-wizard.component';
 import { VendorCompanyService } from '../shared/services/vendor-company.service';
+import { TextInputComponent } from '../shared/components/primitives/text-input/text-input.component';
+import { SelectComponent, SelectOption } from '../shared/components/primitives/select/select.component';
+import { IconButtonComponent } from '../shared/components/primitives/icon-button/icon-button.component';
+import { FilterChipComponent } from '../shared/components/primitives/filter-chip/filter-chip.component';
 
 @Component({
   selector: 'app-company-directory',
@@ -35,47 +39,98 @@ import { VendorCompanyService } from '../shared/services/vendor-company.service'
         </div>
       </div>
 
-      <div class="toolbar">
-        <div class="search-input">
-          <input
-            ibmText
-            placeholder="Search by name, DBA, or email..."
-            [(ngModel)]="searchQuery"
-            (ngModelChange)="onSearchChange()">
+      <div class="toolbar-container">
+        <div class="toolbar">
+          <div class="toolbar-row toolbar-row-primary">
+            <div class="toolbar-search">
+              <app-text-input
+                label="Search"
+                placeholder="Search by name, DBA, or email..."
+                [ngModel]="searchQuery()"
+                (ngModelChange)="searchQuery.set($event); onSearchChange()"
+                (escape)="clearSearch()"
+                ariaLabel="Search vendors">
+              </app-text-input>
+            </div>
+            
+            <div class="toolbar-filters">
+              <app-select
+                label="Status"
+                [options]="statusSelectOptions"
+                [ngModel]="selectedStatus()"
+                (ngModelChange)="selectedStatus.set($event); onSearchChange()"
+                ariaLabel="Filter by status">
+              </app-select>
+              
+              <app-select
+                label="Compliance"
+                [options]="complianceSelectOptions"
+                [ngModel]="selectedComplianceState()"
+                (ngModelChange)="selectedComplianceState.set($event); onSearchChange()"
+                ariaLabel="Filter by compliance state">
+              </app-select>
+              
+              <app-select
+                label="Onboarding"
+                [options]="onboardingSelectOptions"
+                [ngModel]="selectedOnboardingPhase()"
+                (ngModelChange)="selectedOnboardingPhase.set($event); onSearchChange()"
+                ariaLabel="Filter by onboarding phase">
+              </app-select>
+            </div>
+            
+            <div class="toolbar-sort-actions">
+              <div class="toolbar-sort">
+                <app-select
+                  label="Sort by"
+                  [options]="sortSelectOptions"
+                  [ngModel]="sortBy()"
+                  (ngModelChange)="sortBy.set($event); onSearchChange()"
+                  ariaLabel="Sort results">
+                </app-select>
+              </div>
+              
+              <div class="toolbar-actions" *ngIf="hasActiveFilters()">
+                <app-icon-button
+                  buttonKind="tertiary"
+                  tooltip="Clear all filters"
+                  ariaLabel="Clear all filters"
+                  (clicked)="clearAllFilters()">
+                  Clear all
+                </app-icon-button>
+              </div>
+            </div>
+          </div>
         </div>
         
-        <div class="filter-group">
-          <label class="filter-label">Status:</label>
-          <select ibmSelect [(ngModel)]="selectedStatus" (ngModelChange)="onSearchChange()" class="filter-select">
-            <option value="">All</option>
-            <option *ngFor="let status of statusOptions" [value]="status">{{ status }}</option>
-          </select>
-        </div>
-
-        <div class="filter-group">
-          <label class="filter-label">Compliance:</label>
-          <select ibmSelect [(ngModel)]="selectedComplianceState" (ngModelChange)="onSearchChange()" class="filter-select">
-            <option value="">All</option>
-            <option *ngFor="let state of complianceStateOptions" [value]="state">{{ state }}</option>
-          </select>
-        </div>
-
-        <div class="filter-group">
-          <label class="filter-label">Onboarding:</label>
-          <select ibmSelect [(ngModel)]="selectedOnboardingPhase" (ngModelChange)="onSearchChange()" class="filter-select">
-            <option value="">All</option>
-            <option *ngFor="let phase of onboardingPhaseOptions" [value]="phase">{{ phase }}</option>
-          </select>
-        </div>
-
-        <div class="filter-group">
-          <label class="filter-label">Sort by:</label>
-          <select ibmSelect [(ngModel)]="sortBy" (ngModelChange)="onSearchChange()" class="filter-select">
-            <option value="name">Name (A-Z)</option>
-            <option value="name-desc">Name (Z-A)</option>
-            <option value="updated">Last Updated</option>
-            <option value="status">Status</option>
-          </select>
+        <div class="active-filters" *ngIf="hasActiveFilters()">
+          <div class="active-filters-label">Active filters:</div>
+          <div class="active-filters-chips">
+            <app-filter-chip
+              *ngIf="searchQuery()"
+              label="Search"
+              [value]="searchQuery()"
+              (remove)="clearSearch()">
+            </app-filter-chip>
+            <app-filter-chip
+              *ngIf="selectedStatus()"
+              label="Status"
+              [value]="selectedStatus()"
+              (remove)="clearStatus()">
+            </app-filter-chip>
+            <app-filter-chip
+              *ngIf="selectedComplianceState()"
+              label="Compliance"
+              [value]="selectedComplianceState()"
+              (remove)="clearCompliance()">
+            </app-filter-chip>
+            <app-filter-chip
+              *ngIf="selectedOnboardingPhase()"
+              label="Onboarding"
+              [value]="selectedOnboardingPhase()"
+              (remove)="clearOnboarding()">
+            </app-filter-chip>
+          </div>
         </div>
       </div>
 
@@ -159,34 +214,120 @@ import { VendorCompanyService } from '../shared/services/vendor-company.service'
       align-items: center;
     }
 
+    .toolbar-container {
+      margin-bottom: 1.5rem;
+    }
+
     .toolbar {
+      width: 100%;
+    }
+
+    .toolbar-row {
+      display: grid;
+      gap: 1rem;
+      align-items: end;
+    }
+
+    .toolbar-row-primary {
+      /* Desktop: one row with Search (flex-grow), then 3 filters, then Sort aligned right */
+      grid-template-columns: 1fr auto auto auto auto;
+      grid-template-areas: "search filters filters filters sort-actions";
+    }
+
+    .toolbar-search {
+      grid-area: search;
+      min-width: 320px;
+    }
+
+    .toolbar-filters {
+      grid-area: filters;
+      display: grid;
+      grid-template-columns: repeat(3, auto);
+      gap: 1rem;
+    }
+
+    .toolbar-sort-actions {
+      grid-area: sort-actions;
       display: flex;
       gap: 1rem;
-      align-items: flex-end;
-      margin-bottom: 1.5rem;
-      flex-wrap: wrap;
+      align-items: end;
+      justify-content: flex-end;
     }
 
-    .search-input {
-      flex: 1;
-      min-width: 250px;
+    .toolbar-sort {
+      flex: 0 0 auto;
     }
 
-    .filter-group {
+    .toolbar-actions {
+      flex: 0 0 auto;
+    }
+
+    /* Tablet: Search on first row, filters and sort on second row */
+    @media (max-width: 1024px) {
+      .toolbar-row-primary {
+        grid-template-columns: 1fr;
+        grid-template-areas: 
+          "search"
+          "filters"
+          "sort-actions";
+      }
+
+      .toolbar-search {
+        min-width: 100%;
+      }
+
+      .toolbar-filters {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      .toolbar-sort-actions {
+        justify-content: space-between;
+      }
+    }
+
+    /* Mobile: stack vertically with full-width controls */
+    @media (max-width: 768px) {
+      .toolbar-row-primary {
+        grid-template-areas: 
+          "search"
+          "filters"
+          "sort"
+          "actions";
+      }
+
+      .toolbar-filters {
+        grid-template-columns: 1fr;
+      }
+
+      .toolbar-actions {
+        justify-self: stretch;
+      }
+    }
+
+    .active-filters {
       display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-      min-width: 120px;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.75rem;
+      margin-top: 1rem;
+      padding: 0.75rem 1rem;
+      background: var(--linear-surface);
+      border: 1px solid var(--linear-border);
+      border-radius: var(--radius-md);
     }
 
-    .filter-label {
+    .active-filters-label {
       font-size: 0.75rem;
-      color: var(--linear-text-secondary);
       font-weight: 500;
+      color: var(--linear-text-secondary);
+      margin-right: 0.25rem;
     }
 
-    .filter-select {
-      width: 100%;
+    .active-filters-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      flex: 1;
     }
 
     .table-container {
@@ -237,28 +378,65 @@ export class CompanyDirectoryComponent implements OnInit {
 
   loading = signal(false);
   companies = signal<VendorCompany[]>([]);
-  searchQuery = '';
-  selectedStatus = '';
-  selectedComplianceState = '';
-  selectedOnboardingPhase = '';
-  sortBy = 'name';
+  searchQuery = signal('');
+  selectedStatus = signal('');
+  selectedComplianceState = signal('');
+  selectedOnboardingPhase = signal('');
+  sortBy = signal('name');
   editModalOpen = signal(false);
   selectedCompany = signal<VendorCompany | null>(null);
   drawerOpen = signal(false);
   wizardOpen = signal(false);
+  private isUpdatingTable = false;
 
   statusOptions: VendorStatus[] = ['Pending', 'Approved', 'Rejected', 'Archived'];
   complianceStateOptions: VendorComplianceState[] = ['Complete', 'Missing Docs', 'Expired'];
   onboardingPhaseOptions: VendorOnboardingPhase[] = ['New', 'In Review', 'Ready', 'Blocked'];
 
+  // Use static readonly properties instead of getters to avoid creating new arrays on every change detection
+  readonly statusSelectOptions: SelectOption[] = [
+    { value: '', label: 'All' },
+    { value: 'Pending', label: 'Pending' },
+    { value: 'Approved', label: 'Approved' },
+    { value: 'Rejected', label: 'Rejected' },
+    { value: 'Archived', label: 'Archived' }
+  ];
+
+  readonly complianceSelectOptions: SelectOption[] = [
+    { value: '', label: 'All' },
+    { value: 'Complete', label: 'Complete' },
+    { value: 'Missing Docs', label: 'Missing Docs' },
+    { value: 'Expired', label: 'Expired' }
+  ];
+
+  readonly onboardingSelectOptions: SelectOption[] = [
+    { value: '', label: 'All' },
+    { value: 'New', label: 'New' },
+    { value: 'In Review', label: 'In Review' },
+    { value: 'Ready', label: 'Ready' },
+    { value: 'Blocked', label: 'Blocked' }
+  ];
+
+  readonly sortSelectOptions: SelectOption[] = [
+    { value: 'name', label: 'Name (A-Z)' },
+    { value: 'name-desc', label: 'Name (Z-A)' },
+    { value: 'updated', label: 'Last Updated' },
+    { value: 'status', label: 'Status' }
+  ];
+
   tableModel = new TableModel();
 
-  get filteredCompanies(): VendorCompany[] {
+  filteredCompanies = computed(() => {
     let filtered = [...this.companies()];
+    const searchQuery = this.searchQuery();
+    const selectedStatus = this.selectedStatus();
+    const selectedComplianceState = this.selectedComplianceState();
+    const selectedOnboardingPhase = this.selectedOnboardingPhase();
+    const sortBy = this.sortBy();
     
     // Search by name, DBA, or email
-    if (this.searchQuery) {
-      const query = this.searchQuery.toLowerCase();
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
       filtered = filtered.filter(c => 
         c.name.toLowerCase().includes(query) || 
         (c.dba && c.dba.toLowerCase().includes(query)) ||
@@ -267,29 +445,29 @@ export class CompanyDirectoryComponent implements OnInit {
     }
     
     // Filter by status
-    if (this.selectedStatus) {
-      filtered = filtered.filter(c => c.status === this.selectedStatus);
+    if (selectedStatus) {
+      filtered = filtered.filter(c => c.status === selectedStatus);
     }
     
     // Filter by compliance state
-    if (this.selectedComplianceState) {
+    if (selectedComplianceState) {
       filtered = filtered.filter(c => {
         if (!c.complianceState) return false;
-        return c.complianceState === this.selectedComplianceState;
+        return c.complianceState === selectedComplianceState;
       });
     }
     
     // Filter by onboarding phase
-    if (this.selectedOnboardingPhase) {
+    if (selectedOnboardingPhase) {
       filtered = filtered.filter(c => {
         if (!c.onboardingPhase) return false;
-        return c.onboardingPhase === this.selectedOnboardingPhase;
+        return c.onboardingPhase === selectedOnboardingPhase;
       });
     }
     
     // Sort
     filtered.sort((a, b) => {
-      switch (this.sortBy) {
+      switch (sortBy) {
         case 'name':
           return a.name.localeCompare(b.name);
         case 'name-desc':
@@ -304,7 +482,16 @@ export class CompanyDirectoryComponent implements OnInit {
     });
     
     return filtered;
-  }
+  });
+
+  hasActiveFilters = computed(() => {
+    return !!(
+      this.searchQuery() ||
+      this.selectedStatus() ||
+      this.selectedComplianceState() ||
+      this.selectedOnboardingPhase()
+    );
+  });
 
   ngOnInit() {
     this.loadVendors();
@@ -339,24 +526,38 @@ export class CompanyDirectoryComponent implements OnInit {
     this.updateTableData();
   }
 
-  updateTableData() {
-    const filtered = this.filteredCompanies;
-    this.tableModel.data = filtered.map((company, index) => {
-      // Store company ID in the first cell's expandedData for easy retrieval
-      const firstCell = new TableItem({ 
-        data: company.name, 
-        expandedData: company.id,
-        rawData: { companyId: company.id, index: index }
-      });
-      return [
-        firstCell,
-        new TableItem({ data: company.dba || '—' }),
-        new TableItem({ data: company.status }),
-        new TableItem({ data: company.complianceState || '—' }),
-        new TableItem({ data: company.readiness || '—' }),
-        new TableItem({ data: this.formatDate(company.updatedAt || company.createdAt) })
-      ];
-    });
+  private updateTableData() {
+    // Prevent multiple simultaneous updates
+    if (this.isUpdatingTable) {
+      return;
+    }
+    
+    this.isUpdatingTable = true;
+    
+    // Use setTimeout to defer the update and avoid change detection loops
+    setTimeout(() => {
+      try {
+        const filtered = this.filteredCompanies();
+        this.tableModel.data = filtered.map((company, index) => {
+          // Store company ID in the first cell's expandedData for easy retrieval
+          const firstCell = new TableItem({ 
+            data: company.name, 
+            expandedData: company.id,
+            rawData: { companyId: company.id, index: index }
+          });
+          return [
+            firstCell,
+            new TableItem({ data: company.dba || '—' }),
+            new TableItem({ data: company.status }),
+            new TableItem({ data: company.complianceState || '—' }),
+            new TableItem({ data: company.readiness || '—' }),
+            new TableItem({ data: this.formatDate(company.updatedAt || company.createdAt) })
+          ];
+        });
+      } finally {
+        this.isUpdatingTable = false;
+      }
+    }, 0);
   }
 
   formatDate(dateString: string): string {
@@ -372,62 +573,70 @@ export class CompanyDirectoryComponent implements OnInit {
     this.updateTableData();
   }
 
+  clearSearch() {
+    this.searchQuery.set('');
+    this.updateTableData();
+  }
+
+  clearStatus() {
+    this.selectedStatus.set('');
+    this.updateTableData();
+  }
+
+  clearCompliance() {
+    this.selectedComplianceState.set('');
+    this.updateTableData();
+  }
+
+  clearOnboarding() {
+    this.selectedOnboardingPhase.set('');
+    this.updateTableData();
+  }
+
+  clearAllFilters() {
+    this.searchQuery.set('');
+    this.selectedStatus.set('');
+    this.selectedComplianceState.set('');
+    this.selectedOnboardingPhase.set('');
+    this.updateTableData();
+  }
+
   onRowClick(event: any) {
-    let companyId: string | null = null;
-    let company: VendorCompany | null = null;
-    
-    // Method 1: Try to get company ID from the first cell's expandedData
+    // Get row index from the event (data-table component should have normalized it)
     const rowIndex = event?.selectedRowIndex ?? event?.rowIndex ?? event?.index;
-    if (rowIndex !== undefined && rowIndex !== null && rowIndex >= 0) {
-      // Try to get from model data
-      if (event?.model?.data && Array.isArray(event.model.data) && event.model.data[rowIndex]) {
-        const rowData = event.model.data[rowIndex];
-        if (Array.isArray(rowData) && rowData.length > 0) {
-          const firstCell = rowData[0];
-          if (firstCell?.expandedData) {
-            companyId = firstCell.expandedData;
-          } else if (firstCell?.rawData?.companyId) {
-            companyId = firstCell.rawData.companyId;
-          }
-        }
-      }
-      
-      // Fallback: use rowIndex with filteredCompanies
-      if (!companyId) {
-        const filtered = this.filteredCompanies;
-        if (rowIndex < filtered.length) {
-          company = filtered[rowIndex];
-          if (company) {
-            companyId = company.id;
-          }
-        }
-      }
+    
+    if (rowIndex === undefined || rowIndex === null || rowIndex < 0) {
+      console.error('Could not determine row index from event:', event);
+      return;
     }
     
-    // Method 2: Try to get company directly if we have the ID
-    if (companyId && !company) {
-      company = this.filteredCompanies.find(c => c.id === companyId) || null;
+    // Get company directly from filteredCompanies array using row index
+    const filtered = this.filteredCompanies();
+    if (rowIndex >= filtered.length) {
+      console.error('Row index out of bounds:', rowIndex, 'Filtered companies:', filtered.length);
+      return;
     }
     
-    if (company && companyId) {
-      // Right-click or Ctrl+Click for edit, regular click for view
-      const clickEvent = event?.event || event;
-      if (clickEvent?.ctrlKey || clickEvent?.button === 2) {
-        this.selectedCompany.set(company);
-        this.editModalOpen.set(true);
-      } else {
-        // Navigate to vendor detail page
-        this.router.navigate(['/vendors/companies', companyId]);
-      }
+    const company = filtered[rowIndex];
+    if (!company || !company.id) {
+      console.error('Could not find company at row index:', rowIndex);
+      return;
+    }
+    
+    // Right-click or Ctrl+Click for edit, regular click for view
+    const clickEvent = event?.event || event;
+    if (clickEvent?.ctrlKey || clickEvent?.button === 2 || clickEvent?.metaKey) {
+      this.selectedCompany.set(company);
+      this.editModalOpen.set(true);
     } else {
-      console.error('Could not determine company from row click event:', event);
-      console.error('Row index:', rowIndex);
-      console.error('Filtered companies count:', this.filteredCompanies.length);
+      // Navigate to vendor detail page
+      this.router.navigate(['/vendors/companies', company.id]);
     }
   }
 
   editCompany(index: number) {
-    const company = this.filteredCompanies[index];
+    const filtered = this.filteredCompanies();
+    const company = filtered[index];
     if (company) {
       this.selectedCompany.set(company);
       this.editModalOpen.set(true);
@@ -440,9 +649,10 @@ export class CompanyDirectoryComponent implements OnInit {
   }
 
   deactivateCompany(index: number) {
-    const company = this.filteredCompanies[index];
+    const filtered = this.filteredCompanies();
+    const company = filtered[index];
     if (company && confirm(`Deactivate ${company.name}?`)) {
-      company.status = 'Deactivated';
+      company.status = 'Archived';
       this.updateTableData();
       alert('Company deactivated (demo only)');
     }
@@ -452,7 +662,7 @@ export class CompanyDirectoryComponent implements OnInit {
   deactivateFromModal() {
     const company = this.selectedCompany();
     if (company && confirm(`Deactivate ${company.name}?`)) {
-      company.status = 'Deactivated';
+      company.status = 'Archived';
       this.updateTableData();
       this.closeEditModal();
       alert('Company deactivated (demo only)');

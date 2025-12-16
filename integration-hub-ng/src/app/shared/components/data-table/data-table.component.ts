@@ -24,13 +24,26 @@ export class DataTableComponent {
   constructor(public elementRef: ElementRef) {}
 
   handleRowClick(event: any) {
-    // Carbon table rowClick event structure: { model, rowIndex, selectedRowIndex, ... }
+    // Carbon table rowClick event can be just a number (row index) or an object
+    // Extract row index from various possible structures
+    let rowIndex: number | undefined;
+    
+    if (typeof event === 'number') {
+      rowIndex = event;
+    } else {
+      rowIndex = event?.selectedRowIndex ?? event?.rowIndex ?? event?.index ?? event?.row;
+      // Sometimes the row index is nested in event.event
+      if (rowIndex === undefined && typeof event?.event === 'number') {
+        rowIndex = event.event;
+      }
+    }
+    
     // Ensure we pass through the event with proper structure
     const rowClickEvent = {
       ...event,
-      selectedRowIndex: event?.selectedRowIndex ?? event?.rowIndex ?? event?.index,
-      rowIndex: event?.rowIndex ?? event?.selectedRowIndex ?? event?.index,
-      model: event?.model,
+      selectedRowIndex: rowIndex,
+      rowIndex: rowIndex,
+      model: event?.model ?? this.model,
       event: event?.event || event
     };
     

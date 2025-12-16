@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, signal, computed, inject, OnChanges, SimpleChanges, OnInit } from '@angular/core';
+import { Component, Input, Output, EventEmitter, signal, computed, inject, OnChanges, SimpleChanges, OnInit, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import {
@@ -38,13 +38,18 @@ interface WizardStep {
       [open]="open"
       [size]="'lg'"
       (overlaySelected)="closeWizard()"
-      [hasScrollingContent]="true">
-      <ibm-modal-header (closeSelect)="closeWizard()">
-        <p class="bx--modal-header__heading">New Vendor Onboarding</p>
-        <p class="modal-subtitle">Complete the vendor onboarding process step by step</p>
+      [hasScrollingContent]="true"
+      class="vendor-onboarding-modal">
+      <ibm-modal-header (closeSelect)="closeWizard()" class="modal-header-custom">
+        <div class="header-content">
+          <div class="header-text">
+            <p class="bx--modal-header__heading">New Vendor Onboarding</p>
+            <p class="modal-subtitle">Complete the vendor onboarding process step by step</p>
+          </div>
+        </div>
       </ibm-modal-header>
       
-      <div ibmModalContent>
+      <div ibmModalContent class="modal-content-custom">
         <!-- Progress Stepper -->
         <div class="wizard-progress">
           <div 
@@ -291,32 +296,40 @@ interface WizardStep {
         </div>
       </div>
 
-      <ibm-modal-footer>
-        <button ibmButton="secondary" (click)="closeWizard()">Cancel</button>
-        <button 
-          ibmButton="secondary" 
-          (click)="previousStep()"
-          [disabled]="currentStepIndex() === 0">
-          Previous
-        </button>
-        <button 
-          ibmButton="primary" 
-          (click)="nextStep()"
-          [disabled]="!canProceed()"
-          *ngIf="currentStepIndex() < steps().length - 1">
-          Next Step
-        </button>
-        <button 
-          ibmButton="primary" 
-          (click)="completeOnboarding()"
-          [disabled]="!canProceed()"
-          *ngIf="currentStepIndex() === steps().length - 1">
-          Complete Onboarding
-        </button>
+      <ibm-modal-footer class="modal-footer-custom">
+        <div class="footer-actions">
+          <button ibmButton="secondary" (click)="closeWizard()" class="footer-cancel">Cancel</button>
+          <div class="footer-nav">
+            <button 
+              ibmButton="secondary" 
+              (click)="previousStep()"
+              [disabled]="currentStepIndex() === 0"
+              class="footer-previous">
+              Previous
+            </button>
+            <button 
+              ibmButton="primary" 
+              (click)="nextStep()"
+              [disabled]="!canProceed()"
+              *ngIf="currentStepIndex() < steps().length - 1"
+              class="footer-next">
+              Next Step
+            </button>
+            <button 
+              ibmButton="primary" 
+              (click)="completeOnboarding()"
+              [disabled]="!canProceed()"
+              *ngIf="currentStepIndex() === steps().length - 1"
+              class="footer-next">
+              Complete Onboarding
+            </button>
+          </div>
+        </div>
       </ibm-modal-footer>
     </ibm-modal>
   `,
-  styleUrls: ['./vendor-onboarding-wizard.component.scss']
+  styleUrls: ['./vendor-onboarding-wizard.component.scss'],
+  encapsulation: ViewEncapsulation.None
 })
 export class VendorOnboardingWizardComponent implements OnChanges, OnInit {
   private fb = inject(FormBuilder);

@@ -1,6 +1,6 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { TagModule } from 'carbon-components-angular';
+import { TagModule, TagType } from 'carbon-components-angular';
 import { VendorCompany, VendorReadinessState } from '../../models/vendor-company.model';
 
 @Component({
@@ -146,7 +146,7 @@ import { VendorCompany, VendorReadinessState } from '../../models/vendor-company
 export class VendorSummaryCardComponent {
   @Input() vendor!: VendorCompany;
 
-  getStatusColor(status: string): string {
+  getStatusColor(status: string): TagType {
     switch (status) {
       case 'Approved':
         return 'green';
@@ -161,7 +161,7 @@ export class VendorSummaryCardComponent {
     }
   }
 
-  getReadinessColor(readiness: VendorReadinessState): string {
+  getReadinessColor(readiness: VendorReadinessState): TagType {
     switch (readiness) {
       case 'Ready':
         return 'green';

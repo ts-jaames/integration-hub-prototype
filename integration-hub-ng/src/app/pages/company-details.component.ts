@@ -536,6 +536,8 @@ import { ConfirmDialogComponent } from '../shared/components/confirm-dialog/conf
         </div>
 
         <!-- Legacy Compliance Tab (keeping for backward compatibility) -->
+        <!-- Removed: compliance-legacy tab is no longer in activeTab type -->
+        <!--
         <div *ngIf="activeTab() === 'compliance-legacy' && company()?.vendor" class="tab-panel">
           <div class="section">
             <h2>Certification Status</h2>
@@ -578,6 +580,7 @@ import { ConfirmDialogComponent } from '../shared/components/confirm-dialog/conf
             </div>
           </div>
         </div>
+        -->
 
         <!-- Lifecycle Tab -->
         <div *ngIf="activeTab() === 'lifecycle'" class="tab-panel">
@@ -592,8 +595,8 @@ import { ConfirmDialogComponent } from '../shared/components/confirm-dialog/conf
                 <label>Created</label>
                 <p>{{ formatDate(company()?.createdAt || '') }}</p>
               </div>
-              <div class="info-item" *ngIf="company()?.status === 'Deactivated'">
-                <label>Deactivated</label>
+              <div class="info-item" *ngIf="company()?.status === 'Archived'">
+                <label>Archived</label>
                 <p>{{ formatDate(company()?.createdAt || '') }}</p>
               </div>
             </div>
@@ -1615,10 +1618,11 @@ export class CompanyDetailsComponent implements OnInit {
       name: 'Acme Corporation',
       primaryContact: 'John Smith',
       primaryEmail: 'john.smith@acme.com',
-      status: 'Active',
+      status: 'Approved',
       tier: 'Tier 1',
       riskLevel: 'Low',
       createdAt: '2024-01-15T10:00:00Z',
+      updatedAt: '2024-01-15T10:00:00Z',
       website: 'https://acme.com',
       address: '123 Main St, San Francisco, CA',
       vendor: true,
@@ -1664,6 +1668,7 @@ export class CompanyDetailsComponent implements OnInit {
       tier: 'Tier 2',
       riskLevel: 'Medium',
       createdAt: '2024-02-20T14:30:00Z',
+      updatedAt: '2024-02-20T14:30:00Z',
       submittedAt: '2024-02-20T14:30:00Z',
       website: 'https://techstart.com',
       vendor: true,
@@ -1706,10 +1711,11 @@ export class CompanyDetailsComponent implements OnInit {
       name: 'Global Solutions Ltd',
       primaryContact: 'Michael Chen',
       primaryEmail: 'm.chen@globalsolutions.com',
-      status: 'Active',
+      status: 'Approved',
       tier: 'Tier 1',
       riskLevel: 'Low',
       createdAt: '2023-11-10T09:15:00Z',
+      updatedAt: '2023-11-10T09:15:00Z',
       website: 'https://globalsolutions.com',
       address: '456 Business Ave, New York, NY',
       vendor: true,
@@ -1755,6 +1761,7 @@ export class CompanyDetailsComponent implements OnInit {
       tier: 'Tier 3',
       riskLevel: 'High',
       createdAt: '2024-03-05T11:20:00Z',
+      updatedAt: '2024-03-05T11:20:00Z',
       submittedAt: '2024-03-05T11:20:00Z',
       website: 'https://innovateco.com',
       vendor: true,
@@ -1796,10 +1803,11 @@ export class CompanyDetailsComponent implements OnInit {
       name: 'DataFlow Systems',
       primaryContact: 'Robert Wilson',
       primaryEmail: 'r.wilson@dataflow.com',
-      status: 'Active',
+      status: 'Approved',
       tier: 'Tier 2',
       riskLevel: 'Medium',
       createdAt: '2024-01-28T16:45:00Z',
+      updatedAt: '2024-01-28T16:45:00Z',
       website: 'https://dataflow.com',
       address: '789 Tech Blvd, Austin, TX',
       vendor: true,
@@ -1842,10 +1850,11 @@ export class CompanyDetailsComponent implements OnInit {
       name: 'SecureNet Partners',
       primaryContact: 'David Martinez',
       primaryEmail: 'd.martinez@securenet.com',
-      status: 'Deactivated',
+      status: 'Archived',
       tier: 'Tier 1',
       riskLevel: 'Low',
       createdAt: '2023-09-15T08:30:00Z',
+      updatedAt: '2023-09-15T08:30:00Z',
       website: 'https://securenet.com',
       vendor: true,
       lifecycle: {
@@ -2039,10 +2048,10 @@ export class CompanyDetailsComponent implements OnInit {
 
   getStatusColor(status: string): 'red' | 'blue' | 'green' | 'gray' | 'magenta' | 'purple' | 'teal' {
     const colors: Record<string, 'red' | 'blue' | 'green' | 'gray' | 'magenta' | 'purple' | 'teal'> = {
-      'Active': 'green',
+      'Approved': 'green',
       'Pending': 'blue',
       'Rejected': 'red',
-      'Deactivated': 'gray'
+      'Archived': 'gray'
     };
     return colors[status] || 'gray';
   }
@@ -2092,7 +2101,7 @@ export class CompanyDetailsComponent implements OnInit {
   confirmDeactivate() {
     const comp = this.company();
     if (comp) {
-      comp.status = 'Deactivated';
+      comp.status = 'Archived';
       this.company.set({ ...comp });
       this.closeDeactivateModal();
       alert('Company deactivated (demo only)');
@@ -2102,7 +2111,7 @@ export class CompanyDetailsComponent implements OnInit {
   reactivateCompany() {
     const comp = this.company();
     if (comp) {
-      comp.status = 'Active';
+      comp.status = 'Approved';
       this.company.set({ ...comp });
       alert('Company reactivated (demo only)');
     }
