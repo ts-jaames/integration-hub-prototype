@@ -21,6 +21,7 @@ import { VendorUsersSectionComponent } from '../shared/components/vendor-users-s
 import { VendorApiKeysSectionComponent } from '../shared/components/vendor-api-keys-section/vendor-api-keys-section.component';
 import { VendorActivityLogSectionComponent } from '../shared/components/vendor-activity-log-section/vendor-activity-log-section.component';
 import { ConfirmDialogComponent } from '../shared/components/confirm-dialog/confirm-dialog.component';
+import { LoggerService } from '../core/services/logger.service';
 
 @Component({
   selector: 'app-company-details',
@@ -1330,6 +1331,7 @@ export class CompanyDetailsComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private roleService = inject(RoleService);
   private vendorService = inject(VendorCompanyService);
+  private logger = inject(LoggerService);
 
   company = signal<VendorCompany | null>(null);
   activeTab = signal<'profile' | 'onboarding' | 'access' | 'configuration' | 'risk' | 'compliance' | 'users' | 'api-keys' | 'activity' | 'lifecycle'>('profile');
@@ -1912,7 +1914,7 @@ export class CompanyDetailsComponent implements OnInit {
             }
           },
           error: (err) => {
-            console.error('Error loading vendor:', err);
+            this.logger.error('Error loading vendor', err);
             // Fallback to mock data
             const found = this.mockCompanies.find(c => c.id === id);
             if (found) {
@@ -1952,7 +1954,7 @@ export class CompanyDetailsComponent implements OnInit {
         this.closeApproveModal();
       },
       error: (err) => {
-        console.error('Error approving vendor:', err);
+        this.logger.error('Error approving vendor', err);
         alert('Failed to approve vendor. Please try again.');
       }
     });
@@ -1978,7 +1980,7 @@ export class CompanyDetailsComponent implements OnInit {
         this.closeRejectModal();
       },
       error: (err) => {
-        console.error('Error rejecting vendor:', err);
+        this.logger.error('Error rejecting vendor', err);
         alert('Failed to reject vendor. Please try again.');
       }
     });
@@ -2002,7 +2004,7 @@ export class CompanyDetailsComponent implements OnInit {
         this.closeArchiveModal();
       },
       error: (err) => {
-        console.error('Error archiving vendor:', err);
+        this.logger.error('Error archiving vendor', err);
         alert('Failed to archive vendor. Please try again.');
       }
     });

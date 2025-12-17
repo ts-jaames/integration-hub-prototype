@@ -22,6 +22,7 @@ import { StatusTagComponent } from '../../shared/components/status-tag/status-ta
 import { TableEmptyStateComponent } from '../../shared/components/table-empty-state/table-empty-state.component';
 import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/confirm-dialog.component';
 import { RightRailAnchorsComponent, Anchor } from '../../shared/components/right-rail-anchors/right-rail-anchors.component';
+import { LoggerService } from '../../../core/services/logger.service';
 
 @Component({
   selector: 'app-company-management-dashboard',
@@ -285,6 +286,7 @@ export class CompanyManagementDashboardPage implements OnInit {
   private api = inject(InMemoryAdminApiService);
   private router = inject(Router);
   private fb = inject(FormBuilder);
+  private logger = inject(LoggerService);
 
   loading = signal(false);
   companies = signal<Company[]>([]);
@@ -379,11 +381,7 @@ export class CompanyManagementDashboardPage implements OnInit {
       },
       error: () => {
         this.loading.set(false);
-        console.log({
-          type: 'error',
-          title: 'Error',
-          message: 'Failed to load companies'
-        });
+        this.logger.error('Failed to load companies');
       }
     });
   }
@@ -422,18 +420,10 @@ export class CompanyManagementDashboardPage implements OnInit {
     this.api.suspendCompany(company.id).subscribe({
       next: () => {
         this.loadCompanies();
-        console.log({
-          type: 'success',
-          title: 'Success',
-          message: `Company "${company.name}" ${company.status === 'suspended' ? 'activated' : 'suspended'}`
-        });
+        this.logger.info(`Company "${company.name}" ${company.status === 'suspended' ? 'activated' : 'suspended'} successfully`);
       },
       error: () => {
-        console.log({
-          type: 'error',
-          title: 'Error',
-          message: 'Failed to update company status'
-        });
+        this.logger.error('Failed to update company status');
       }
     });
   }
@@ -503,19 +493,11 @@ export class CompanyManagementDashboardPage implements OnInit {
         this.creating.set(false);
         this.closeNewCompanyModal();
         this.loadCompanies();
-        console.log({
-          type: 'success',
-          title: 'Success',
-          message: `Company "${formValue.name}" created successfully`
-        });
+        this.logger.info(`Company "${formValue.name}" created successfully`);
       },
       error: () => {
         this.creating.set(false);
-        console.log({
-          type: 'error',
-          title: 'Error',
-          message: 'Failed to create company'
-        });
+        this.logger.error('Failed to create company');
       }
     });
   }
@@ -537,18 +519,10 @@ export class CompanyManagementDashboardPage implements OnInit {
         this.deleteConfirmOpen.set(false);
         this.companyToDelete.set(null);
         this.loadCompanies();
-        console.log({
-          type: 'success',
-          title: 'Success',
-          message: `Company "${company.name}" deleted successfully`
-        });
+        this.logger.info(`Company "${company.name}" deleted successfully`);
       },
       error: () => {
-        console.log({
-          type: 'error',
-          title: 'Error',
-          message: 'Failed to delete company'
-        });
+        this.logger.error('Failed to delete company');
       }
     });
   }

@@ -1,10 +1,13 @@
-import { Directive, HostListener, Input } from '@angular/core';
+import { Directive, HostListener, Input, inject } from '@angular/core';
+import { LoggerService } from '../../../core/services/logger.service';
 
 @Directive({
   selector: '[appCopyToClipboard]',
   standalone: true
 })
 export class CopyToClipboardDirective {
+  private logger = inject(LoggerService);
+  
   @Input() appCopyToClipboard: string = '';
   @Input() copyLabel: string = 'Copied to clipboard';
 
@@ -17,9 +20,9 @@ export class CopyToClipboardDirective {
 
     try {
       await navigator.clipboard.writeText(this.appCopyToClipboard);
-      console.log(this.copyLabel);
+      this.logger.debug(this.copyLabel);
     } catch (err) {
-      console.error('Failed to copy to clipboard');
+      this.logger.error('Failed to copy to clipboard', err);
     }
   }
 }

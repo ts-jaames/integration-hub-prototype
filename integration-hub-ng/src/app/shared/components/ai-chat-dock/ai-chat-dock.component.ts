@@ -19,6 +19,7 @@ import {
   IconModule
 } from 'carbon-components-angular';
 import { AiAssistantService, ChatMessage } from '../../../core/ai-assistant.service';
+import { LoggerService } from '../../../core/services/logger.service';
 
 interface ContextualSuggestion {
   id: string;
@@ -750,6 +751,7 @@ interface ContextualSuggestion {
 export class AiChatDockComponent implements OnInit, OnDestroy {
   private aiAssistant = inject(AiAssistantService);
   private router = inject(Router);
+  private logger = inject(LoggerService);
   private destroy$ = new Subject<void>();
 
   @ViewChild('messagesContainer', { static: false }) messagesContainer?: ElementRef<HTMLDivElement>;
@@ -871,7 +873,7 @@ export class AiChatDockComponent implements OnInit, OnDestroy {
         this.sending.set(false);
       },
       error: (error) => {
-        console.error('Error sending message:', error);
+        this.logger.error('Error sending message', error);
         this.sending.set(false);
       }
     });

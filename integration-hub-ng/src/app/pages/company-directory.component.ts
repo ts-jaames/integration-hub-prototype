@@ -22,6 +22,7 @@ import { TextInputComponent } from '../shared/components/primitives/text-input/t
 import { SelectComponent, SelectOption } from '../shared/components/primitives/select/select.component';
 import { IconButtonComponent } from '../shared/components/primitives/icon-button/icon-button.component';
 import { FilterChipComponent } from '../shared/components/primitives/filter-chip/filter-chip.component';
+import { LoggerService } from '../core/services/logger.service';
 
 @Component({
   selector: 'app-company-directory',
@@ -375,6 +376,7 @@ import { FilterChipComponent } from '../shared/components/primitives/filter-chip
 export class CompanyDirectoryComponent implements OnInit {
   private router = inject(Router);
   private vendorService = inject(VendorCompanyService);
+  private logger = inject(LoggerService);
 
   loading = signal(false);
   companies = signal<VendorCompany[]>([]);
@@ -507,7 +509,7 @@ export class CompanyDirectoryComponent implements OnInit {
         this.loading.set(false);
       },
       error: (err) => {
-        console.error('Error loading vendors:', err);
+        this.logger.error('Error loading vendors', err);
         this.loading.set(false);
       }
     });
@@ -606,20 +608,20 @@ export class CompanyDirectoryComponent implements OnInit {
     const rowIndex = event?.selectedRowIndex ?? event?.rowIndex ?? event?.index;
     
     if (rowIndex === undefined || rowIndex === null || rowIndex < 0) {
-      console.error('Could not determine row index from event:', event);
+      this.logger.warn('Could not determine row index from event', { event });
       return;
     }
     
     // Get company directly from filteredCompanies array using row index
     const filtered = this.filteredCompanies();
     if (rowIndex >= filtered.length) {
-      console.error('Row index out of bounds:', rowIndex, 'Filtered companies:', filtered.length);
+      this.logger.warn('Row index out of bounds', { rowIndex, filteredCount: filtered.length });
       return;
     }
     
     const company = filtered[rowIndex];
     if (!company || !company.id) {
-      console.error('Could not find company at row index:', rowIndex);
+      this.logger.warn('Could not find company at row index', { rowIndex });
       return;
     }
     
@@ -686,7 +688,7 @@ export class CompanyDirectoryComponent implements OnInit {
   }
 
   onOnboardingCompleted(data: any) {
-    console.log('Onboarding completed:', data);
+    this.logger.info('Onboarding completed', { data });
     // In a real app, this would create the vendor company with lifecycle data
     alert('Vendor onboarding completed! (Demo only - data not saved)');
     // You could navigate to the new company detail page here
@@ -694,7 +696,7 @@ export class CompanyDirectoryComponent implements OnInit {
   }
 
   onVendorCompanySaved(data: any) {
-    console.log('Vendor company saved from drawer:', data);
+    this.logger.info('Vendor company saved from drawer', { data });
     // Reload vendors to get the new one
     this.loadVendors();
   }

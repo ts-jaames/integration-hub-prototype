@@ -15,6 +15,7 @@ import {
 import { InMemoryAdminApiService } from '../../services/in-memory-admin-api.service';
 import { RegistrationRequest } from '../../models';
 import { StatusTagComponent } from '../../shared/components/status-tag/status-tag.component';
+import { LoggerService } from '../../../core/services/logger.service';
 
 @Component({
   selector: 'app-company-registration-review',
@@ -147,6 +148,7 @@ import { StatusTagComponent } from '../../shared/components/status-tag/status-ta
 })
 export class CompanyRegistrationReviewPage implements OnInit {
   private api = inject(InMemoryAdminApiService);
+  private logger = inject(LoggerService);
 
   loading = signal(false);
   requests = signal<RegistrationRequest[]>([]);
@@ -234,19 +236,11 @@ export class CompanyRegistrationReviewPage implements OnInit {
         this.approving.set(false);
         this.closeReviewPanel();
         this.loadRequests();
-        console.log({
-          type: 'success',
-          title: 'Success',
-          message: `Registration approved. Company created and invitation sent to ${request.submittedByEmail}`
-        });
+        this.logger.info(`Registration approved. Company created and invitation sent to ${request.submittedByEmail}`);
       },
       error: () => {
         this.approving.set(false);
-        console.log({
-          type: 'error',
-          title: 'Error',
-          message: 'Failed to approve registration'
-        });
+        this.logger.error('Failed to approve registration');
       }
     });
   }
@@ -261,19 +255,11 @@ export class CompanyRegistrationReviewPage implements OnInit {
         this.rejecting.set(false);
         this.closeReviewPanel();
         this.loadRequests();
-        console.log({
-          type: 'success',
-          title: 'Success',
-          message: 'Registration rejected'
-        });
+        this.logger.info('Registration rejected successfully');
       },
       error: () => {
         this.rejecting.set(false);
-        console.log({
-          type: 'error',
-          title: 'Error',
-          message: 'Failed to reject registration'
-        });
+        this.logger.error('Failed to reject registration');
       }
     });
   }

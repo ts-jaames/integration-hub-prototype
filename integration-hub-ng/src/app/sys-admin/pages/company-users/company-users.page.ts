@@ -19,6 +19,7 @@ import { User, RoleKey } from '../../models';
 import { StatusTagComponent } from '../../shared/components/status-tag/status-tag.component';
 import { RoleTagPipe } from '../../shared/pipes/role-tag.pipe';
 import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/confirm-dialog.component';
+import { LoggerService } from '../../../core/services/logger.service';
 
 @Component({
   selector: 'app-company-users',
@@ -156,6 +157,7 @@ export class CompanyUsersPage implements OnInit {
   private router = inject(Router);
   private api = inject(InMemoryAdminApiService);
   private fb = inject(FormBuilder);
+  private logger = inject(LoggerService);
 
   loading = signal(false);
   users = signal<User[]>([]);
@@ -280,18 +282,10 @@ export class CompanyUsersPage implements OnInit {
     this.api.inviteUser(companyId, formValue.email, formValue.role).subscribe({
       next: () => {
         this.closeInviteModal();
-        console.log({
-          type: 'success',
-          title: 'Success',
-          message: `Invitation sent to ${formValue.email}`
-        });
+        this.logger.info(`Invitation sent to ${formValue.email}`);
       },
       error: () => {
-        console.log({
-          type: 'error',
-          title: 'Error',
-          message: 'Failed to send invitation'
-        });
+        this.logger.error('Failed to send invitation');
       }
     });
   }
@@ -328,11 +322,7 @@ export class CompanyUsersPage implements OnInit {
         if (companyId) {
           this.loadUsers(companyId);
         }
-        console.log({
-          type: 'success',
-          title: 'Success',
-          message: 'Roles updated'
-        });
+        this.logger.info('Roles updated successfully');
       }
     });
   }
@@ -348,11 +338,7 @@ export class CompanyUsersPage implements OnInit {
         if (companyId) {
           this.loadUsers(companyId);
         }
-        console.log({
-          type: 'success',
-          title: 'Success',
-          message: 'User suspended'
-        });
+        this.logger.info('User suspended successfully');
       }
     });
   }

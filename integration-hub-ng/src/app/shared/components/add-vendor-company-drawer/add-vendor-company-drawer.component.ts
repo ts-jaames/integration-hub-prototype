@@ -4,6 +4,7 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractContro
 import { ButtonModule, InputModule, SelectModule, CheckboxModule } from 'carbon-components-angular';
 import { Subject, takeUntil } from 'rxjs';
 import { VendorCompanyService } from '../../services/vendor-company.service';
+import { LoggerService } from '../../../core/services/logger.service';
 
 interface VendorCompanyFormData {
   companyName: string;
@@ -602,6 +603,7 @@ export class AddVendorCompanyDrawerComponent implements OnInit, OnDestroy {
 
   private fb = inject(FormBuilder);
   private vendorCompanyService = inject(VendorCompanyService);
+  private logger = inject(LoggerService);
 
   form!: FormGroup;
   saving = signal(false);
@@ -787,20 +789,20 @@ export class AddVendorCompanyDrawerComponent implements OnInit, OnDestroy {
     }
 
     const formData = this.getFormValue();
-    console.log('New vendor company payload', formData);
+    this.logger.debug('New vendor company payload', { formData });
 
     this.saving.set(true);
     this.vendorCompanyService.saveVendorCompany(formData).pipe(
       takeUntil(this.destroy$)
     ).subscribe({
       next: (result) => {
-        console.log('Vendor company saved:', result);
+        this.logger.info('Vendor company saved successfully', { result });
         this.saving.set(false);
         this.saved.emit(formData);
         this.onClose();
       },
       error: (error) => {
-        console.error('Error saving vendor company:', error);
+        this.logger.error('Error saving vendor company', error);
         this.saving.set(false);
       }
     });
@@ -813,14 +815,14 @@ export class AddVendorCompanyDrawerComponent implements OnInit, OnDestroy {
     }
 
     const formData = this.getFormValue();
-    console.log('New vendor company payload', formData);
+    this.logger.debug('New vendor company payload', { formData });
 
     this.saving.set(true);
     this.vendorCompanyService.saveVendorCompany(formData).pipe(
       takeUntil(this.destroy$)
     ).subscribe({
       next: (result) => {
-        console.log('Vendor company saved:', result);
+        this.logger.info('Vendor company saved successfully', { result });
         this.saving.set(false);
         this.saved.emit(formData);
         // Reset form but keep drawer open
@@ -839,7 +841,7 @@ export class AddVendorCompanyDrawerComponent implements OnInit, OnDestroy {
         });
       },
       error: (error) => {
-        console.error('Error saving vendor company:', error);
+        this.logger.error('Error saving vendor company', error);
         this.saving.set(false);
       }
     });

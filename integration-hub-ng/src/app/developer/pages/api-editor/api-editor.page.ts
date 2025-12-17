@@ -19,6 +19,7 @@ import { ApiEntity, Backend, RouteDef, PolicyTemplate, AppliedPolicy, Deployment
 import { StatusTagPipe } from '../../shared/pipes/status-tag.pipe';
 import { RightRailAnchorsComponent, Anchor } from '../../shared/components/right-rail-anchors/right-rail-anchors.component';
 import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/confirm-dialog.component';
+import { LoggerService } from '../../../core/services/logger.service';
 
 @Component({
   selector: 'app-api-editor',
@@ -379,6 +380,7 @@ export class ApiEditorPage implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private fb = inject(FormBuilder);
+  private logger = inject(LoggerService);
 
   api = signal<ApiEntity | null>(null);
   policyTemplates = signal<PolicyTemplate[]>([]);
@@ -520,11 +522,7 @@ export class ApiEditorPage implements OnInit {
         next: () => {
           this.closeBackendModal();
           this.loadApi(api.id);
-          console.log({
-            // type: 'success',
-            // title: 'Success',
-            message: 'Backend updated'
-          });
+          this.logger.info('Backend updated successfully');
         }
       });
     } else {
@@ -532,11 +530,7 @@ export class ApiEditorPage implements OnInit {
         next: () => {
           this.closeBackendModal();
           this.loadApi(api.id);
-          console.log({
-            // type: 'success',
-            // title: 'Success',
-            message: 'Backend added'
-          });
+          this.logger.info('Backend added successfully');
         }
       });
     }
@@ -565,11 +559,7 @@ export class ApiEditorPage implements OnInit {
         next: () => {
           this.closeRouteModal();
           this.loadApi(api.id);
-          console.log({
-            // type: 'success',
-            // title: 'Success',
-            message: 'Route updated'
-          });
+          this.logger.info('Route updated successfully');
         }
       });
     } else {
@@ -583,11 +573,7 @@ export class ApiEditorPage implements OnInit {
         next: () => {
           this.closeRouteModal();
           this.loadApi(api.id);
-          console.log({
-            // type: 'success',
-            // title: 'Success',
-            message: 'Route added'
-          });
+          this.logger.info('Route added successfully');
         }
       });
     }
@@ -607,11 +593,7 @@ export class ApiEditorPage implements OnInit {
     this.devService.applyPolicy(api.id, applied).subscribe({
       next: () => {
         this.loadApi(api.id);
-        console.log({
-          // type: 'success',
-          // title: 'Success',
-          message: 'Policy applied'
-        });
+        this.logger.info('Policy applied successfully');
       }
     });
   }
@@ -634,11 +616,7 @@ export class ApiEditorPage implements OnInit {
     this.devService.removePolicy(api.id, policyId).subscribe({
       next: () => {
         this.loadApi(api.id);
-        console.log({
-          // type: 'success',
-          // title: 'Success',
-          message: 'Policy removed'
-        });
+        this.logger.info('Policy removed successfully');
       }
     });
   }
@@ -650,11 +628,7 @@ export class ApiEditorPage implements OnInit {
     const content = format === 'openapi-json' ? this.openApiJson : this.openApiYaml;
     this.devService.saveOpenApi(api.id, content, format).subscribe({
       next: () => {
-        console.log({
-          // type: 'success',
-          // title: 'Success',
-          message: 'OpenAPI saved'
-        });
+        this.logger.info('OpenAPI saved successfully');
         this.loadApi(api.id);
       }
     });
@@ -667,11 +641,7 @@ export class ApiEditorPage implements OnInit {
     this.devService.generateMarkdownFromOpenAPI(api.id).subscribe({
       next: (doc) => {
         this.markdown = doc.content;
-        console.log({
-          // type: 'success',
-          // title: 'Success',
-          message: 'Markdown generated'
-        });
+        this.logger.info('Markdown generated successfully');
       }
     });
   }
@@ -701,11 +671,7 @@ export class ApiEditorPage implements OnInit {
       env: formValue.env as EnvKey
     }).subscribe({
       next: (deployment) => {
-        console.log({
-          // type: 'success',
-          // title: 'Success',
-          message: deployment.summary
-        });
+        this.logger.info('Deployment successful', { summary: deployment.summary });
         this.loadDeployments(api.id);
         // Note: Tab switching would need manual tab index management
       }

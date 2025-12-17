@@ -1,5 +1,6 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { LoggerService } from '../../../core/services/logger.service';
 
 @Component({
   selector: 'app-code-block',
@@ -115,6 +116,8 @@ import { CommonModule } from '@angular/common';
   `]
 })
 export class CodeBlockComponent {
+  private logger = inject(LoggerService);
+  
   @Input() code: string = '';
   
   copied = false;
@@ -127,7 +130,7 @@ export class CodeBlockComponent {
         this.copied = false;
       }, 2000);
     } catch (err) {
-      console.error('Failed to copy code:', err);
+      this.logger.error('Failed to copy code', err);
       // Fallback for older browsers
       const textArea = document.createElement('textarea');
       textArea.value = this.code;
@@ -142,7 +145,7 @@ export class CodeBlockComponent {
           this.copied = false;
         }, 2000);
       } catch (fallbackErr) {
-        console.error('Fallback copy failed:', fallbackErr);
+        this.logger.error('Fallback copy failed', fallbackErr);
       }
       document.body.removeChild(textArea);
     }

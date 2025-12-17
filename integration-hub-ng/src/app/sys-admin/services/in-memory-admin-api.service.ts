@@ -1,5 +1,8 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
 import { BehaviorSubject, Observable, of, delay } from 'rxjs';
+import { environment } from '../../../environments/environment';
+import { ApiClientService } from '../../core/services/api-client.service';
+import { LoggerService } from '../../core/services/logger.service';
 import { 
   Company, 
   User, 
@@ -14,29 +17,20 @@ import {
   RoleKey
 } from '../models';
 
-const STORAGE_KEYS = {
-  companies: 'sys_admin_companies',
-  users: 'sys_admin_users',
-  registrationRequests: 'sys_admin_registration_requests',
-  invitations: 'sys_admin_invitations',
-  auditEvents: 'sys_admin_audit_events'
-};
+// Removed STORAGE_KEYS - in-memory services should not persist to localStorage
+// Data is only kept in memory and resets on page refresh
 
 @Injectable({
   providedIn: 'root'
 })
 export class InMemoryAdminApiService {
-  private companiesSubject = new BehaviorSubject<Company[]>(this.loadFromStorage<Company>(STORAGE_KEYS.companies) || this.getSeedCompanies());
-  private usersSubject = new BehaviorSubject<User[]>(this.loadFromStorage<User>(STORAGE_KEYS.users) || this.getSeedUsers());
-  private registrationRequestsSubject = new BehaviorSubject<RegistrationRequest[]>(
-    this.loadFromStorage<RegistrationRequest>(STORAGE_KEYS.registrationRequests) || this.getSeedRegistrationRequests()
-  );
-  private invitationsSubject = new BehaviorSubject<Invitation[]>(
-    this.loadFromStorage<Invitation>(STORAGE_KEYS.invitations) || []
-  );
-  private auditEventsSubject = new BehaviorSubject<AuditEvent[]>(
-    this.loadFromStorage<AuditEvent>(STORAGE_KEYS.auditEvents) || []
-  );
+  // In-memory only - no localStorage persistence
+  // Data resets on page refresh (as expected for mock services)
+  private companiesSubject = new BehaviorSubject<Company[]>(this.getSeedCompanies());
+  private usersSubject = new BehaviorSubject<User[]>(this.getSeedUsers());
+  private registrationRequestsSubject = new BehaviorSubject<RegistrationRequest[]>(this.getSeedRegistrationRequests());
+  private invitationsSubject = new BehaviorSubject<Invitation[]>([]);
+  private auditEventsSubject = new BehaviorSubject<AuditEvent[]>([]);
 
   companies$ = this.companiesSubject.asObservable();
   users$ = this.usersSubject.asObservable();
@@ -47,79 +41,99 @@ export class InMemoryAdminApiService {
   private companiesSignal = signal<Company[]>(this.companiesSubject.value);
   private usersSignal = signal<User[]>(this.usersSubject.value);
 
+  private apiClient = inject(ApiClientService);
+  private logger = inject(LoggerService);
+
   constructor() {
+    // No localStorage persistence - data is in-memory only
     this.companies$.subscribe(companies => {
       this.companiesSignal.set(companies);
-      this.saveToStorage(STORAGE_KEYS.companies, companies);
     });
     this.users$.subscribe(users => {
       this.usersSignal.set(users);
-      this.saveToStorage(STORAGE_KEYS.users, users);
     });
-    this.registrationRequests$.subscribe(requests => {
-      this.saveToStorage(STORAGE_KEYS.registrationRequests, requests);
-    });
-    this.invitations$.subscribe(invitations => {
-      this.saveToStorage(STORAGE_KEYS.invitations, invitations);
-    });
-    this.auditEvents$.subscribe(events => {
-      this.saveToStorage(STORAGE_KEYS.auditEvents, events);
-    });
+    // No subscriptions needed for other subjects - they're already reactive
   }
 
   // Company methods
   listCompanies(filter?: { status?: CompanyStatus[], vendor?: boolean, search?: string }): Observable<Company[]> {
-    let companies = [...this.companiesSubject.value];
-    
-    if (filter?.status && filter.status.length > 0) {
-      companies = companies.filter(c => filter.status!.includes(c.status));
+    if (environment.enableMockData) {
+      // Dev mode: use in-memory mocks
+      this.logger.debug('InMemoryAdminApiService: Returning mock companies');
+      let companies = [...this.companiesSubject.value];
+      
+      if (filter?.status && filter.status.length > 0) {
+        companies = companies.filter(c => filter.status!.includes(c.status));
+      }
+      
+      if (filter?.vendor !== undefined) {
+        companies = companies.filter(c => c.vendor === filter.vendor);
+      }
+      
+      if (filter?.search) {
+        const searchLower = filter.search.toLowerCase();
+        companies = companies.filter(c => 
+          c.name.toLowerCase().includes(searchLower) || 
+          c.slug.toLowerCase().includes(searchLower)
+        );
+      }
+      
+      return of(companies).pipe(delay(200));
     }
+
+    // Production: use real API
+    const params: any = {};
+    if (filter?.status) params.status = filter.status.join(',');
+    if (filter?.vendor !== undefined) params.vendor = filter.vendor;
+    if (filter?.search) params.search = filter.search;
     
-    if (filter?.vendor !== undefined) {
-      companies = companies.filter(c => c.vendor === filter.vendor);
-    }
-    
-    if (filter?.search) {
-      const searchLower = filter.search.toLowerCase();
-      companies = companies.filter(c => 
-        c.name.toLowerCase().includes(searchLower) || 
-        c.slug.toLowerCase().includes(searchLower)
-      );
-    }
-    
-    return of(companies).pipe(delay(200));
+    return this.apiClient.get<Company[]>('companies', { params });
   }
 
   getCompany(id: string): Observable<Company | null> {
-    const company = this.companiesSubject.value.find(c => c.id === id);
-    return of(company || null).pipe(delay(100));
+    if (environment.enableMockData) {
+      // Dev mode: use in-memory mocks
+      this.logger.debug(`InMemoryAdminApiService: Returning mock company ${id}`);
+      const company = this.companiesSubject.value.find(c => c.id === id);
+      return of(company || null).pipe(delay(100));
+    }
+
+    // Production: use real API
+    return this.apiClient.get<Company>(`companies/${id}`);
   }
 
   createCompany(payload: Partial<Company>): Observable<Company> {
-    const company: Company = {
-      id: `company-${Date.now()}`,
-      name: payload.name!,
-      slug: payload.slug!,
-      status: payload.status || 'active',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      metadata: payload.metadata,
-      teams: payload.teams || [],
-      vendor: payload.vendor || false
-    };
-    
-    const companies = [...this.companiesSubject.value, company];
-    this.companiesSubject.next(companies);
-    
-    this.logAuditEvent({
-      actorUserId: 'admin-1',
+    if (environment.enableMockData) {
+      // Dev mode: use in-memory mocks
+      this.logger.debug('InMemoryAdminApiService: Creating mock company');
+      const company: Company = {
+        id: `company-${Date.now()}`,
+        name: payload.name!,
+        slug: payload.slug!,
+        status: payload.status || 'active',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        metadata: payload.metadata,
+        teams: payload.teams || [],
+        vendor: payload.vendor || false
+      };
+      
+      const companies = [...this.companiesSubject.value, company];
+      this.companiesSubject.next(companies);
+      
+      this.logAuditEvent({
+        actorUserId: 'admin-1',
       action: 'COMPANY_CREATED',
       targetType: 'company',
       targetId: company.id,
       metadata: { name: company.name }
     });
     
-    return of(company).pipe(delay(300));
+      return of(company).pipe(delay(300));
+    }
+
+    // Production: use real API
+    return this.apiClient.post<Company>('companies', payload);
   }
 
   updateCompany(id: string, patch: Partial<Company>): Observable<Company> {
@@ -470,23 +484,8 @@ export class InMemoryAdminApiService {
     this.auditEventsSubject.next(events);
   }
 
-  // Storage helpers
-  private loadFromStorage<T>(key: string): T[] | null {
-    try {
-      const data = localStorage.getItem(key);
-      return data ? JSON.parse(data) : null;
-    } catch {
-      return null;
-    }
-  }
-
-  private saveToStorage<T>(key: string, data: T[]): void {
-    try {
-      localStorage.setItem(key, JSON.stringify(data));
-    } catch (error) {
-      console.error('Failed to save to localStorage:', error);
-    }
-  }
+  // Removed localStorage helpers - in-memory services should not persist data
+  // This ensures mock data doesn't leak into production and resets on page refresh
 
   // Seed data
   private getSeedCompanies(): Company[] {

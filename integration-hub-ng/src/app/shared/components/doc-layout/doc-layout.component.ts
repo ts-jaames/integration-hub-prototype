@@ -1,6 +1,7 @@
-import { Component, OnInit, OnDestroy, AfterViewInit, ViewChild, ElementRef, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, ViewChild, ElementRef, HostListener, inject } from '@angular/core';
 import { TocService, TocHeading } from '../../services/toc.service';
 import { Subscription } from 'rxjs';
+import { LoggerService } from '../../../core/services/logger.service';
 
 @Component({
   selector: 'app-doc-layout',
@@ -392,7 +393,7 @@ export class DocLayoutComponent implements OnInit, AfterViewInit, OnDestroy {
       this.tocService.headings$.subscribe(headings => {
         this.headings = headings;
         this.showToc = headings.length >= 2;
-        console.log('Headings updated:', headings.length, 'Show TOC:', this.showToc); // Debug
+        this.logger.debug('Headings updated', { count: headings.length, showToc: this.showToc });
         this.updateMobileButtonVisibility();
       })
     );
@@ -417,14 +418,14 @@ export class DocLayoutComponent implements OnInit, AfterViewInit, OnDestroy {
       if (this.contentArea?.nativeElement) {
         const headings = this.tocService.extractHeadings(this.contentArea.nativeElement);
         
-        console.log('Extracted headings:', headings); // Debug
+        this.logger.debug('Extracted headings', { headings });
         
         if (headings.length > 0) {
           // Initialize scroll spy
           this.tocService.initScrollSpy(this.contentArea.nativeElement);
         }
       } else {
-        console.warn('Content area not found'); // Debug
+        this.logger.warn('Content area not found');
       }
     }, 100);
     
