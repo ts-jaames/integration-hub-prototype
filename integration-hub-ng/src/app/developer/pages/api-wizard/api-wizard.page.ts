@@ -4,6 +4,7 @@ import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } 
 import { Router } from '@angular/router';
 import { ButtonModule, InputModule, CheckboxModule } from 'carbon-components-angular';
 import { InMemoryDevService } from '../../services/in-memory-dev.service';
+import { LoggerService } from '../../../core/services/logger.service';
 import { ApiEntity, EnvKey } from '../../models';
 import { RightRailAnchorsComponent, Anchor } from '../../shared/components/right-rail-anchors/right-rail-anchors.component';
 
@@ -242,6 +243,7 @@ import { RightRailAnchorsComponent, Anchor } from '../../shared/components/right
 })
 export class ApiWizardPage implements OnInit {
   private devService = inject(InMemoryDevService);
+  private logger = inject(LoggerService);
   private fb = inject(FormBuilder);
   router = inject(Router);
 
@@ -348,11 +350,11 @@ export class ApiWizardPage implements OnInit {
 
     this.devService.createApi(apiData).subscribe({
       next: (api) => {
-        console.log('API created successfully');
+        this.logger.info('API created successfully');
         this.router.navigate(['/dev/apis', api.id]);
       },
       error: () => {
-        console.error('Failed to create API');
+        this.logger.error('Failed to create API');
       }
     });
   }

@@ -5,6 +5,7 @@ import { TableModule, TableModel, TableItem, TableHeaderItem, ButtonModule, Moda
 import { VendorCompany, VendorUser } from '../../models/vendor-company.model';
 import { VendorCompanyService } from '../../services/vendor-company.service';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
+import { LoggerService } from '../../../core/services/logger.service';
 
 @Component({
   selector: 'app-vendor-users-section',
@@ -179,6 +180,7 @@ export class VendorUsersSectionComponent implements OnInit, OnChanges {
 
   private vendorService = inject(VendorCompanyService);
   private fb = inject(FormBuilder);
+  private logger = inject(LoggerService);
 
   inviteModalOpen = signal(false);
   deleteConfirmOpen = signal(false);
@@ -264,7 +266,7 @@ export class VendorUsersSectionComponent implements OnInit, OnChanges {
         this.reloadVendor();
       },
       error: (err) => {
-        console.error('Error inviting user:', err);
+        this.logger.error('Error inviting user', err);
         this.inviting.set(false);
         alert(err.message || 'Failed to invite user. Please try again.');
       }
@@ -287,7 +289,7 @@ export class VendorUsersSectionComponent implements OnInit, OnChanges {
         this.reloadVendor();
       },
       error: (err) => {
-        console.error('Error removing user:', err);
+        this.logger.error('Error removing user', err);
         alert('Failed to remove user. Please try again.');
       }
     });

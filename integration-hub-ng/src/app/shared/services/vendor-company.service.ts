@@ -1,6 +1,9 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
 import { Observable, of, delay, BehaviorSubject } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { environment } from '../../../environments/environment';
+import { ApiClientService } from '../../core/services/api-client.service';
+import { LoggerService } from '../../core/services/logger.service';
 import { 
   VendorCompany, 
   VendorStatus, 
@@ -48,98 +51,131 @@ const MOCK_CURRENT_USER = {
   providedIn: 'root'
 })
 export class VendorCompanyService {
-  // In-memory store for vendors
+  private apiClient = inject(ApiClientService);
+  private logger = inject(LoggerService);
+
+  // In-memory store for vendors (only used when enableMockData is true)
   private vendors = signal<VendorCompany[]>([]);
   
-  // Initialize with mock data
+  // Initialize with mock data if in mock mode
   constructor() {
-    this.initializeMockData();
+    if (environment.enableMockData) {
+      this.initializeMockData();
+    }
   }
 
   /**
    * Get all vendors
    */
   getVendors(): Observable<VendorCompany[]> {
-    return of(this.vendors()).pipe(delay(300));
+    if (environment.enableMockData) {
+      // Dev mode: use in-memory mocks
+      this.logger.debug('VendorCompanyService: Returning mock vendors');
+      return of(this.vendors()).pipe(delay(300));
+    }
+
+    // Production: use real API
+    return this.apiClient.get<VendorCompany[]>('vendors');
   }
 
   /**
    * Get vendor by ID
    */
   getVendorById(id: string): Observable<VendorCompany | null> {
-    const vendor = this.vendors().find(v => v.id === id);
-    return of(vendor || null).pipe(delay(200));
+    if (environment.enableMockData) {
+      // Dev mode: use in-memory mocks
+      this.logger.debug(`VendorCompanyService: Returning mock vendor ${id}`);
+      const vendor = this.vendors().find(v => v.id === id);
+      return of(vendor || null).pipe(delay(200));
+    }
+
+    // Production: use real API
+    return this.apiClient.get<VendorCompany>(`vendors/${id}`);
   }
 
   /**
    * Create a new vendor
    */
   createVendor(data: VendorCompanyFormData): Observable<VendorCompany> {
-    const vendor: VendorCompany = {
-      id: `vendor_${Date.now()}`,
-      name: data.companyName,
-      dba: data.dba,
-      primaryContact: data.primaryContactName,
-      primaryEmail: data.primaryContactEmail,
-      primaryPhone: data.primaryContactPhone,
-      status: 'Pending',
-      riskLevel: 'Medium',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      updatedBy: MOCK_CURRENT_USER.name,
-      purpose: data.purpose,
-      category: data.category,
-      vendor: true,
-      users: [],
-      apiKeys: [],
-      documents: [],
-      activityLog: []
-    };
+    if (environment.enableMockData) {
+      // Dev mode: use in-memory mocks
+      this.logger.debug('VendorCompanyService: Creating mock vendor');
+      const vendor: VendorCompany = {
+        id: `vendor_${Date.now()}`,
+        name: data.companyName,
+        dba: data.dba,
+        primaryContact: data.primaryContactName,
+        primaryEmail: data.primaryContactEmail,
+        primaryPhone: data.primaryContactPhone,
+        status: 'Pending',
+        riskLevel: 'Medium',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        updatedBy: MOCK_CURRENT_USER.name,
+        purpose: data.purpose,
+        category: data.category,
+        vendor: true,
+        users: [],
+        apiKeys: [],
+        documents: [],
+        activityLog: []
+      };
 
-    // Compute initial readiness
-    vendor.readiness = this.computeReadiness(vendor);
-    vendor.readinessBlockers = this.getReadinessBlockers(vendor);
+      // Compute initial readiness
+      vendor.readiness = this.computeReadiness(vendor);
+      vendor.readinessBlockers = this.getReadinessBlockers(vendor);
 
-    // Add creation activity log entry
-    this.addActivityLogEntry(vendor, 'Vendor created', `Vendor "${vendor.name}" was created`);
+      // Add creation activity log entry
+      this.addActivityLogEntry(vendor, 'Vendor created', `Vendor "${vendor.name}" was created`);
 
-    // Update vendors list
-    this.vendors.update(vendors => [...vendors, vendor]);
+      // Update vendors list
+      this.vendors.update(vendors => [...vendors, vendor]);
 
-    return of(vendor).pipe(delay(500));
+      return of(vendor).pipe(delay(500));
+    }
+
+    // Production: use real API
+    return this.apiClient.post<VendorCompany>('vendors', data);
   }
 
   /**
    * Update vendor metadata
    */
   updateVendor(id: string, updates: Partial<VendorCompany>): Observable<VendorCompany> {
-    const vendor = this.vendors().find(v => v.id === id);
-    if (!vendor) {
-      throw new Error(`Vendor with id ${id} not found`);
+    if (environment.enableMockData) {
+      // Dev mode: use in-memory mocks
+      this.logger.debug(`VendorCompanyService: Updating mock vendor ${id}`);
+      const vendor = this.vendors().find(v => v.id === id);
+      if (!vendor) {
+        throw new Error(`Vendor with id ${id} not found`);
+      }
+
+      const updated: VendorCompany = {
+        ...vendor,
+        ...updates,
+        updatedAt: new Date().toISOString(),
+        updatedBy: MOCK_CURRENT_USER.name
+      };
+
+      // Recompute readiness if relevant fields changed
+      if (updates.status || updates.documents || updates.compliance) {
+        updated.readiness = this.computeReadiness(updated);
+        updated.readinessBlockers = this.getReadinessBlockers(updated);
+      }
+
+      // Add activity log entry
+      this.addActivityLogEntry(updated, 'Vendor metadata updated', 'Vendor information was modified');
+
+      // Update vendors list
+      this.vendors.update(vendors => 
+        vendors.map(v => v.id === id ? updated : v)
+      );
+
+      return of(updated).pipe(delay(300));
     }
 
-    const updated: VendorCompany = {
-      ...vendor,
-      ...updates,
-      updatedAt: new Date().toISOString(),
-      updatedBy: MOCK_CURRENT_USER.name
-    };
-
-    // Recompute readiness if relevant fields changed
-    if (updates.status || updates.documents || updates.compliance) {
-      updated.readiness = this.computeReadiness(updated);
-      updated.readinessBlockers = this.getReadinessBlockers(updated);
-    }
-
-    // Add activity log entry
-    this.addActivityLogEntry(updated, 'Vendor metadata updated', 'Vendor information was modified');
-
-    // Update vendors list
-    this.vendors.update(vendors => 
-      vendors.map(v => v.id === id ? updated : v)
-    );
-
-    return of(updated).pipe(delay(300));
+    // Production: use real API
+    return this.apiClient.patch<VendorCompany>(`vendors/${id}`, updates);
   }
 
   /**

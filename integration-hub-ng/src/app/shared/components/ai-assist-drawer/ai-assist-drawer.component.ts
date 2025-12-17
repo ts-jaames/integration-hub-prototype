@@ -24,6 +24,7 @@ import {
   ButtonModule,
   IconModule
 } from 'carbon-components-angular';
+import { LoggerService } from '../../../core/services/logger.service';
 
 export interface SuggestedAction {
   id: string;
@@ -685,6 +686,8 @@ export class AiAssistDrawerComponent implements OnInit, OnDestroy, OnChanges {
   private timeoutIds: number[] = [];
   private subscriptions: Subscription[] = [];
 
+  private logger = inject(LoggerService);
+
   constructor() {
     // Effect will be set up after inputs are initialized
   }
@@ -784,7 +787,7 @@ export class AiAssistDrawerComponent implements OnInit, OnDestroy, OnChanges {
           this.timeoutIds.push(timeoutId);
         },
         error: (error) => {
-          console.error('Error sending message:', error);
+          this.logger.error('Error sending message', error);
           this.sending.set(false);
         }
       });
@@ -816,7 +819,7 @@ export class AiAssistDrawerComponent implements OnInit, OnDestroy, OnChanges {
           this.timeoutIds.push(timeoutId);
         },
         error: (error) => {
-          console.error('Error processing action:', error);
+          this.logger.error('Error processing action', error);
           this.processingAction.set(null);
         }
       });

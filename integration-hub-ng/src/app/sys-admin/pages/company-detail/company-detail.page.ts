@@ -11,6 +11,7 @@ import { InMemoryAdminApiService } from '../../services/in-memory-admin-api.serv
 import { Company } from '../../models';
 import { StatusTagComponent } from '../../shared/components/status-tag/status-tag.component';
 import { RightRailAnchorsComponent, Anchor } from '../../shared/components/right-rail-anchors/right-rail-anchors.component';
+import { LoggerService } from '../../../core/services/logger.service';
 
 @Component({
   selector: 'app-company-detail',
@@ -242,6 +243,7 @@ export class CompanyDetailPage implements OnInit {
   private router = inject(Router);
   private api = inject(InMemoryAdminApiService);
   private fb = inject(FormBuilder);
+  private logger = inject(LoggerService);
 
   company = signal<Company | null>(null);
   selectedTab = signal(0);
@@ -299,11 +301,7 @@ export class CompanyDetailPage implements OnInit {
       this.api.suspendCompany(id).subscribe({
         next: () => {
           this.loadCompany(id);
-          console.log({
-            type: 'success',
-            title: 'Success',
-            message: 'Company status updated'
-          });
+          this.logger.info('Company status updated successfully');
         }
       });
     }
@@ -328,11 +326,7 @@ export class CompanyDetailPage implements OnInit {
     }).subscribe({
       next: () => {
         this.loadCompany(id);
-        console.log({
-          type: 'success',
-          title: 'Success',
-          message: 'Settings saved'
-        });
+        this.logger.info('Settings saved successfully');
       }
     });
   }

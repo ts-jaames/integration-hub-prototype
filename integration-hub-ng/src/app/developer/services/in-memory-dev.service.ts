@@ -1,5 +1,8 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, inject } from '@angular/core';
 import { BehaviorSubject, Observable, of, delay } from 'rxjs';
+import { environment } from '../../../environments/environment';
+import { ApiClientService } from '../../core/services/api-client.service';
+import { LoggerService } from '../../core/services/logger.service';
 import {
   ServiceAccount,
   ApiKey,
@@ -13,69 +16,66 @@ import {
   EnvKey
 } from '../models';
 
-const STORAGE_KEYS = {
-  serviceAccounts: 'dev_service_accounts',
-  apis: 'dev_apis',
-  policyTemplates: 'dev_policy_templates',
-  deployments: 'dev_deployments'
-};
+// Removed STORAGE_KEYS - in-memory services should not persist to localStorage
+// Data is only kept in memory and resets on page refresh
 
 @Injectable({
   providedIn: 'root'
 })
 export class InMemoryDevService {
-  private serviceAccountsSubject = new BehaviorSubject<ServiceAccount[]>(
-    this.loadFromStorage<ServiceAccount[]>(STORAGE_KEYS.serviceAccounts) || this.getSeedServiceAccounts()
-  );
-  private apisSubject = new BehaviorSubject<ApiEntity[]>(
-    this.loadFromStorage<ApiEntity[]>(STORAGE_KEYS.apis) || this.getSeedApis()
-  );
-  private policyTemplatesSubject = new BehaviorSubject<PolicyTemplate[]>(
-    this.loadFromStorage<PolicyTemplate[]>(STORAGE_KEYS.policyTemplates) || this.getSeedPolicyTemplates()
-  );
-  private deploymentsSubject = new BehaviorSubject<Deployment[]>(
-    this.loadFromStorage<Deployment[]>(STORAGE_KEYS.deployments) || this.getSeedDeployments()
-  );
+  // In-memory only - no localStorage persistence
+  // Data resets on page refresh (as expected for mock services)
+  private serviceAccountsSubject = new BehaviorSubject<ServiceAccount[]>(this.getSeedServiceAccounts());
+  private apisSubject = new BehaviorSubject<ApiEntity[]>(this.getSeedApis());
+  private policyTemplatesSubject = new BehaviorSubject<PolicyTemplate[]>(this.getSeedPolicyTemplates());
+  private deploymentsSubject = new BehaviorSubject<Deployment[]>(this.getSeedDeployments());
 
   serviceAccounts$ = this.serviceAccountsSubject.asObservable();
   apis$ = this.apisSubject.asObservable();
   policyTemplates$ = this.policyTemplatesSubject.asObservable();
   deployments$ = this.deploymentsSubject.asObservable();
 
+  private apiClient = inject(ApiClientService);
+  private logger = inject(LoggerService);
+
   constructor() {
-    this.serviceAccounts$.subscribe(accounts => {
-      this.saveToStorage(STORAGE_KEYS.serviceAccounts, accounts);
-    });
-    this.apis$.subscribe(apis => {
-      this.saveToStorage(STORAGE_KEYS.apis, apis);
-    });
-    this.policyTemplates$.subscribe(templates => {
-      this.saveToStorage(STORAGE_KEYS.policyTemplates, templates);
-    });
-    this.deployments$.subscribe(deployments => {
-      this.saveToStorage(STORAGE_KEYS.deployments, deployments);
-    });
+    // No localStorage persistence - data is in-memory only
+    // Data resets on page refresh (as expected for mock services)
   }
 
   // Service Account methods
   listServiceAccounts(): Observable<ServiceAccount[]> {
-    return of([...this.serviceAccountsSubject.value]).pipe(delay(200));
+    if (environment.enableMockData) {
+      // Dev mode: use in-memory mocks
+      this.logger.debug('InMemoryDevService: Returning mock service accounts');
+      return of([...this.serviceAccountsSubject.value]).pipe(delay(200));
+    }
+
+    // Production: use real API
+    return this.apiClient.get<ServiceAccount[]>('service-accounts');
   }
 
   createServiceAccount(payload: Partial<ServiceAccount>): Observable<ServiceAccount> {
-    const account: ServiceAccount = {
-      id: `sa-${Date.now()}`,
-      name: payload.name!,
-      description: payload.description,
-      envs: payload.envs || [],
-      scopes: payload.scopes || [],
-      createdAt: new Date().toISOString(),
-      status: 'active',
-      keys: []
-    };
-    const accounts = [...this.serviceAccountsSubject.value, account];
-    this.serviceAccountsSubject.next(accounts);
-    return of(account).pipe(delay(300));
+    if (environment.enableMockData) {
+      // Dev mode: use in-memory mocks
+      this.logger.debug('InMemoryDevService: Creating mock service account');
+      const account: ServiceAccount = {
+        id: `sa-${Date.now()}`,
+        name: payload.name!,
+        description: payload.description,
+        envs: payload.envs || [],
+        scopes: payload.scopes || [],
+        createdAt: new Date().toISOString(),
+        status: 'active',
+        keys: []
+      };
+      const accounts = [...this.serviceAccountsSubject.value, account];
+      this.serviceAccountsSubject.next(accounts);
+      return of(account).pipe(delay(300));
+    }
+
+    // Production: use real API
+    return this.apiClient.post<ServiceAccount>('service-accounts', payload);
   }
 
   updateServiceAccount(id: string, patch: Partial<ServiceAccount>): Observable<ServiceAccount> {
@@ -449,25 +449,8 @@ ${api.routes.map(r => `### ${r.methods.join(', ')} ${r.path}`).join('\n')}
     return of(deployments).pipe(delay(200));
   }
 
-  // Storage helpers
-  private loadFromStorage<T>(key: string): T | null {
-    try {
-      const item = localStorage.getItem(key);
-      if (!item) return null;
-      const parsed = JSON.parse(item);
-      return Array.isArray(parsed) ? parsed as T : null;
-    } catch {
-      return null;
-    }
-  }
-
-  private saveToStorage<T>(key: string, data: T): void {
-    try {
-      localStorage.setItem(key, JSON.stringify(data));
-    } catch (e) {
-      console.error('Failed to save to localStorage', e);
-    }
-  }
+  // Removed localStorage helpers - in-memory services should not persist data
+  // This ensures mock data doesn't leak into production and resets on page refresh
 
   // Seed data
   private getSeedServiceAccounts(): ServiceAccount[] {

@@ -5,6 +5,7 @@ import { TableModule, TableModel, TableItem, TableHeaderItem, ButtonModule, Moda
 import { VendorCompany, VendorApiKey } from '../../models/vendor-company.model';
 import { VendorCompanyService } from '../../services/vendor-company.service';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
+import { LoggerService } from '../../../core/services/logger.service';
 
 @Component({
   selector: 'app-vendor-api-keys-section',
@@ -221,6 +222,7 @@ export class VendorApiKeysSectionComponent implements OnInit, OnChanges {
 
   private vendorService = inject(VendorCompanyService);
   private fb = inject(FormBuilder);
+  private logger = inject(LoggerService);
 
   generateModalOpen = signal(false);
   keyDisplayModalOpen = signal(false);
@@ -308,7 +310,7 @@ export class VendorApiKeysSectionComponent implements OnInit, OnChanges {
         this.reloadVendor();
       },
       error: (err) => {
-        console.error('Error generating key:', err);
+        this.logger.error('Error generating key', err);
         this.generating.set(false);
         alert(err.message || 'Failed to generate API key. Please try again.');
       }
@@ -342,7 +344,7 @@ export class VendorApiKeysSectionComponent implements OnInit, OnChanges {
         this.reloadVendor();
       },
       error: (err) => {
-        console.error('Error revoking key:', err);
+        this.logger.error('Error revoking key', err);
         alert('Failed to revoke key. Please try again.');
       }
     });

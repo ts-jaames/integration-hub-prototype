@@ -3,7 +3,7 @@ import { BrowserModule } from '@angular/platform-browser';
 import { CommonModule } from '@angular/common';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { HttpClientModule } from '@angular/common/http';
-import { RouterModule, Routes } from '@angular/router';
+import { RouterModule } from '@angular/router';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 
 import {
@@ -88,105 +88,7 @@ import {
 import { SidebarNavComponent } from './shared/nav/sidebar-nav.component';
 import { BreadcrumbsComponent } from './shared/nav/breadcrumbs.component';
 import { CodeBlockComponent } from './shared/components/code-block/code-block.component';
-
-const routes: Routes = [
-  { path: '', component: DashboardComponent },
-  { path: 'companies', component: CompaniesComponent },
-  { path: 'users', component: UsersComponent },
-  { 
-    path: 'service-accounts', 
-    component: ServiceAccountsPage,
-    canActivate: [devRoleGuard]
-  },
-  { path: 'apis', component: ApisComponent },
-  { path: 'monitoring', component: MonitoringComponent },
-  { path: 'compliance', component: ComplianceComponent },
-  { path: 'docs/webhooks', component: WebhooksDocsComponent },
-  { path: 'roles-permissions', component: RolesPermissionsComponent },
-  { path: 'credentials-keys', component: CredentialsKeysComponent },
-  { path: 'usage-analytics', component: UsageAnalyticsComponent },
-  { path: 'platform-settings', component: PlatformSettingsComponent },
-  { path: 'support-tickets', component: SupportTicketsComponent },
-      { path: 'vendors', redirectTo: 'vendors/companies', pathMatch: 'full' },
-      { path: 'vendors/companies', component: CompanyDirectoryComponent },
-      { path: 'vendors/companies/:id', component: CompanyDetailsComponent },
-      { path: 'vendors/onboarding', component: OnboardingQueueComponent },
-      { 
-        path: 'ai-assistant', 
-        children: [
-          { path: 'insights', component: AiAssistantInsightsComponent },
-          { path: 'insights/:id', component: AiAssistantInsightDetailComponent },
-          { path: 'workflow/:id', component: AiAssistantWorkflowComponent },
-          { path: 'resolution/:id', component: AiAssistantResolutionComponent },
-          { path: 'agent/:id', component: AiAssistantAgentModeComponent },
-          { path: 'agent-summary/:id', component: AiAssistantAgentSummaryComponent },
-          { path: '', redirectTo: 'insights', pathMatch: 'full' }
-        ]
-      },
-  {
-    path: 'admin',
-    canActivate: [roleGuard],
-    children: [
-      {
-        path: '',
-        redirectTo: 'companies',
-        pathMatch: 'full'
-      },
-      {
-        path: 'companies',
-        component: CompanyManagementDashboardPage
-      },
-      {
-        path: 'companies/:id',
-        component: CompanyDetailPage
-      },
-      {
-        path: 'companies/:id/users',
-        component: CompanyUsersPage
-      },
-      {
-        path: 'registrations',
-        component: CompanyRegistrationReviewPage
-      },
-      {
-        path: 'audit',
-        component: AdminAuditLogPage
-      }
-    ]
-  },
-  {
-    path: 'dev',
-    canActivate: [devRoleGuard],
-    children: [
-      {
-        path: '',
-        redirectTo: 'dashboard',
-        pathMatch: 'full'
-      },
-      {
-        path: 'dashboard',
-        component: DevDashboardPage
-      },
-      {
-        path: 'service-accounts',
-        component: ServiceAccountsPage
-      },
-      {
-        path: 'apis',
-        component: ApiCatalogPage
-      },
-      {
-        path: 'apis/new',
-        component: ApiWizardPage
-      },
-      {
-        path: 'apis/:apiId',
-        component: ApiEditorPage
-      }
-    ]
-  },
-  { path: '**', redirectTo: '' },
-];
+import { routes } from './app.routes';
 
 @NgModule({
   declarations: [

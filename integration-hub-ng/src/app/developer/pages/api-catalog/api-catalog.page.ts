@@ -20,6 +20,7 @@ import { ApiEntity, ApiAuditLog, EnvKey } from '../../models';
 import { StatusTagPipe } from '../../shared/pipes/status-tag.pipe';
 import { DataTableComponent } from '../../../shared/components/data-table/data-table.component';
 import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/confirm-dialog.component';
+import { LoggerService } from '../../../core/services/logger.service';
 
 @Component({
   selector: 'app-api-catalog',
@@ -940,6 +941,7 @@ import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/c
 })
 export class ApiCatalogPage implements OnInit, AfterViewInit {
   private devService = inject(InMemoryDevService);
+  private logger = inject(LoggerService);
   router = inject(Router);
 
   @ViewChild('apiTable') apiTable!: ElementRef<DataTableComponent>;
@@ -1185,14 +1187,14 @@ export class ApiCatalogPage implements OnInit, AfterViewInit {
     }
     
     if (rowIndex === -1 || rowIndex < 0) {
-      console.warn('Could not determine row index from event:', event);
+      this.logger.warn('Could not determine row index from event', { event });
       return;
     }
     
     const api = this.filteredApis()[rowIndex];
     
     if (!api) {
-      console.warn('No API found at row index:', rowIndex, 'Total APIs:', this.filteredApis().length);
+      this.logger.warn('No API found at row index', { rowIndex, totalApis: this.filteredApis().length });
       return;
     }
     
@@ -1400,20 +1402,20 @@ export class ApiCatalogPage implements OnInit, AfterViewInit {
   rotateCredentials(api: ApiEntity) {
     this.actionMenuOpen.set(null);
     // Rotate credentials logic
-    console.log('Rotating credentials for', api.name);
+    this.logger.debug('Rotating credentials', { apiName: api.name });
   }
 
   syncSchema(api: ApiEntity) {
     this.actionMenuOpen.set(null);
     // Sync schema logic
-    console.log('Syncing schema for', api.name);
+    this.logger.debug('Syncing schema', { apiName: api.name });
   }
 
   deleteApi(api: ApiEntity) {
     this.actionMenuOpen.set(null);
     if (confirm(`Delete ${api.name}? This action cannot be undone.`)) {
       // Delete logic
-      console.log('Deleting', api.name);
+      this.logger.info('Deleting API', { apiName: api.name });
     }
   }
 

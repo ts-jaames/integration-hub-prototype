@@ -22,6 +22,7 @@ import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/c
 import { CopyToClipboardDirective } from '../../shared/directives/copy-to-clipboard.directive';
 import { DataTableComponent } from '../../../shared/components/data-table/data-table.component';
 import { RightRailAnchorsComponent, Anchor } from '../../shared/components/right-rail-anchors/right-rail-anchors.component';
+import { LoggerService } from '../../../core/services/logger.service';
 
 @Component({
   selector: 'app-service-accounts',
@@ -1213,6 +1214,7 @@ import { RightRailAnchorsComponent, Anchor } from '../../shared/components/right
 export class ServiceAccountsPage implements OnInit {
   private devService = inject(InMemoryDevService);
   private fb = inject(FormBuilder);
+  private logger = inject(LoggerService);
   router = inject(Router);
 
 
@@ -1554,10 +1556,10 @@ export class ServiceAccountsPage implements OnInit {
         this.closeCreateModal();
         this.currentPage.set(1);
         this.loadAccounts();
-        console.log('Service account created successfully');
+        this.logger.info('Service account created successfully');
       },
       error: () => {
-        console.error('Failed to create service account');
+        this.logger.error('Failed to create service account');
       }
     });
   }
@@ -1610,18 +1612,10 @@ export class ServiceAccountsPage implements OnInit {
         this.closeEditModal();
         this.loadAccounts();
         this.selectedAccount.set(updated);
-        console.log({
-          type: 'success',
-          title: 'Success',
-          message: 'Service account updated'
-        });
+        this.logger.info('Service account updated successfully');
       },
       error: () => {
-        console.log({
-          type: 'error',
-          title: 'Error',
-          message: 'Failed to update service account'
-        });
+        this.logger.error('Failed to update service account');
       }
     });
   }
@@ -1670,18 +1664,10 @@ export class ServiceAccountsPage implements OnInit {
           this.updateKeysTable();
         }
         this.tokenPreviewModalOpen.set(true);
-        console.log({
-          type: 'success',
-          title: 'Success',
-          message: 'Key created successfully'
-        });
+        this.logger.info('Key created successfully');
       },
       error: () => {
-        console.log({
-          type: 'error',
-          title: 'Error',
-          message: 'Failed to create key'
-        });
+        this.logger.error('Failed to create key');
       }
     });
   }
@@ -1703,18 +1689,10 @@ export class ServiceAccountsPage implements OnInit {
           this.selectedAccount.set(updatedAccount);
           this.updateKeysTable();
         }
-        console.log({
-          type: 'success',
-          title: 'Success',
-          message: 'Key rotated successfully'
-        });
+        this.logger.info('Key rotated successfully');
       },
       error: () => {
-        console.log({
-          type: 'error',
-          title: 'Error',
-          message: 'Failed to rotate key'
-        });
+        this.logger.error('Failed to rotate key');
       }
     });
   }
@@ -1745,18 +1723,10 @@ export class ServiceAccountsPage implements OnInit {
           this.selectedAccount.set(updatedAccount);
           this.updateKeysTable();
         }
-        console.log({
-          type: 'success',
-          title: 'Success',
-          message: 'Key revoked successfully'
-        });
+        this.logger.info('Key revoked successfully');
       },
       error: () => {
-        console.log({
-          type: 'error',
-          title: 'Error',
-          message: 'Failed to revoke key'
-        });
+        this.logger.error('Failed to revoke key');
       }
     });
   }
@@ -1767,11 +1737,7 @@ export class ServiceAccountsPage implements OnInit {
 
   copyKeyToken(key: ApiKey) {
     // Copy token preview
-    console.log({
-      type: 'info',
-      title: 'Copied',
-      message: 'Token copied to clipboard'
-    });
+    this.logger.debug('Token copied to clipboard');
   }
 
   rotateAllKeys() {
@@ -1824,18 +1790,10 @@ export class ServiceAccountsPage implements OnInit {
       next: (updatedAccount) => {
         this.loadAccounts();
         this.selectedAccount.set(updatedAccount);
-        console.log({
-          type: 'success',
-          title: 'Success',
-          message: 'Scope removed'
-        });
+        this.logger.info('Scope removed successfully');
       },
       error: () => {
-        console.log({
-          type: 'error',
-          title: 'Error',
-          message: 'Failed to remove scope'
-        });
+        this.logger.error('Failed to remove scope');
       }
     });
   }
@@ -1846,11 +1804,7 @@ export class ServiceAccountsPage implements OnInit {
 
     // Validate at least one scope if any env is enabled
     if (this.editingScopes().length === 0 && account.envs.length > 0) {
-      console.log({
-        type: 'error',
-        title: 'Validation Error',
-        message: 'At least one scope is required when environments are enabled'
-      });
+      this.logger.warn('At least one scope is required when environments are enabled');
       return;
     }
 
@@ -1859,18 +1813,10 @@ export class ServiceAccountsPage implements OnInit {
         this.closeEditScopesModal();
         this.loadAccounts();
         this.selectedAccount.set(updatedAccount);
-        console.log({
-          type: 'success',
-          title: 'Success',
-          message: 'Scopes updated successfully'
-        });
+        this.logger.info('Scopes updated successfully');
       },
       error: () => {
-        console.log({
-          type: 'error',
-          title: 'Error',
-          message: 'Failed to update scopes'
-        });
+        this.logger.error('Failed to update scopes');
       }
     });
   }
@@ -1893,18 +1839,10 @@ export class ServiceAccountsPage implements OnInit {
           const updated = this.serviceAccounts().find(a => a.id === account.id);
           if (updated) this.selectedAccount.set(updated);
         }
-        console.log({
-          type: 'success',
-          title: 'Success',
-          message: 'Service account suspended'
-        });
+        this.logger.info('Service account suspended successfully');
       },
       error: () => {
-        console.log({
-          type: 'error',
-          title: 'Error',
-          message: 'Failed to suspend service account'
-        });
+        this.logger.error('Failed to suspend service account');
       }
     });
   }
@@ -1924,30 +1862,18 @@ export class ServiceAccountsPage implements OnInit {
       });
       this.selectedRows.set([]);
       this.loadAccounts();
-      console.log({
-        type: 'success',
-        title: 'Success',
-        message: `${selected.length} account(s) suspended`
-      });
+      this.logger.info(`${selected.length} account(s) suspended successfully`);
     }
   }
 
   bulkAddScope() {
     // Open modal to select scope and add to all selected accounts
-    console.log({
-      type: 'info',
-      title: 'Coming Soon',
-      message: 'Bulk scope addition will be available soon'
-    });
+    this.logger.debug('Bulk scope addition will be available soon');
   }
 
   bulkCreateKey() {
     // Open modal to create keys for all selected accounts
-    console.log({
-      type: 'info',
-      title: 'Coming Soon',
-      message: 'Bulk key creation will be available soon'
-    });
+    this.logger.debug('Bulk key creation will be available soon');
   }
 
   suspendConfirmMessage = computed(() => {
@@ -2069,7 +1995,7 @@ export class ServiceAccountsPage implements OnInit {
 
   openDeveloperDocs() {
     // Placeholder: open docs
-    console.log('Opening developer docs...');
+    this.logger.debug('Opening developer docs...');
   }
 
   openRotateSecretModal() {
@@ -2087,7 +2013,7 @@ export class ServiceAccountsPage implements OnInit {
   copySecret() {
     const secret = this.selectedAccount()?.keys[0]?.tokenPreview || '';
     navigator.clipboard.writeText(secret).then(() => {
-      console.log('Secret copied to clipboard');
+      this.logger.debug('Secret copied to clipboard');
     });
   }
 
@@ -2103,14 +2029,14 @@ export class ServiceAccountsPage implements OnInit {
     // Mock token generation
     const token = 'sk_live_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
     this.generatedToken.set(token);
-    console.log('Token generated:', token);
+    this.logger.debug('Token generated', { token: '***' });
   }
 
   copyGeneratedToken() {
     const token = this.generatedToken();
     if (token) {
       navigator.clipboard.writeText(token).then(() => {
-        console.log('Token copied to clipboard');
+        this.logger.debug('Token copied to clipboard');
       });
     }
   }
@@ -2125,7 +2051,7 @@ export class ServiceAccountsPage implements OnInit {
       a.download = 'service-account-token.txt';
       a.click();
       window.URL.revokeObjectURL(url);
-      console.log('Token downloaded');
+      this.logger.debug('Token downloaded');
     }
   }
 
@@ -2141,6 +2067,6 @@ export class ServiceAccountsPage implements OnInit {
     this.selectedAccount.set(updatedAccount);
     this.closeRotateSecretModal();
     this.confirmRotate = false;
-    console.log('Secret rotated');
+    this.logger.info('Secret rotated successfully');
   }
 }

@@ -1,4 +1,5 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, inject } from '@angular/core';
+import { LoggerService } from '../../core/services/logger.service';
 
 @Injectable({
   providedIn: 'root'
@@ -54,7 +55,7 @@ export class NavStateService {
         return new Set(parsed);
       }
     } catch (error) {
-      console.warn('Failed to load nav state from localStorage', error);
+      this.logger.warn('Failed to load nav state from localStorage', error);
     }
     return new Set();
   }
@@ -64,7 +65,7 @@ export class NavStateService {
       const array = Array.from(sections);
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(array));
     } catch (error) {
-      console.warn('Failed to save nav state to localStorage', error);
+      this.logger.warn('Failed to save nav state to localStorage', error);
     }
   }
 }

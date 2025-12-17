@@ -1,5 +1,6 @@
-import { Component, signal, ViewEncapsulation } from '@angular/core';
+import { Component, signal, ViewEncapsulation, inject } from '@angular/core';
 import { SuggestedAction } from '../shared/components/ai-assist-drawer/ai-assist-drawer.component';
+import { LoggerService } from '../core/services/logger.service';
 
 @Component({
   selector: 'app-webhooks-docs',
@@ -305,6 +306,7 @@ import { SuggestedAction } from '../shared/components/ai-assist-drawer/ai-assist
   `]
 })
 export class WebhooksDocsComponent {
+  private logger = inject(LoggerService);
   assistDrawerOpen = signal(false);
   assistContext = signal<string>('');
   assistDescription = signal<string>('');
@@ -368,7 +370,7 @@ export class WebhooksDocsComponent {
   handleAssistAction(action: SuggestedAction) {
     // Action is handled by the drawer component
     // This is just for any additional page-specific logic if needed
-    console.log('Action triggered:', action);
+    this.logger.debug('Action triggered', { action });
   }
   createWebhookCode = `POST /api/v1/webhooks
 Content-Type: application/json

@@ -5,6 +5,7 @@ import { TableModule, TableModel, TableItem, TableHeaderItem, ButtonModule, Moda
 import { VendorCompany, VendorDocument } from '../../models/vendor-company.model';
 import { VendorCompanyService } from '../../services/vendor-company.service';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
+import { LoggerService } from '../../../core/services/logger.service';
 
 @Component({
   selector: 'app-vendor-compliance-section',
@@ -191,6 +192,7 @@ export class VendorComplianceSectionComponent implements OnInit, OnChanges {
 
   private vendorService = inject(VendorCompanyService);
   private fb = inject(FormBuilder);
+  private logger = inject(LoggerService);
 
   uploadModalOpen = signal(false);
   deleteConfirmOpen = signal(false);
@@ -295,7 +297,7 @@ export class VendorComplianceSectionComponent implements OnInit, OnChanges {
         this.reloadVendor();
       },
       error: (err) => {
-        console.error('Error uploading document:', err);
+        this.logger.error('Error uploading document', err);
         this.uploading.set(false);
         alert('Failed to upload document. Please try again.');
       }
@@ -318,7 +320,7 @@ export class VendorComplianceSectionComponent implements OnInit, OnChanges {
         this.reloadVendor();
       },
       error: (err) => {
-        console.error('Error removing document:', err);
+        this.logger.error('Error removing document', err);
         alert('Failed to remove document. Please try again.');
       }
     });
