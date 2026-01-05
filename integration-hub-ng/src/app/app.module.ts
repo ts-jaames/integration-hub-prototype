@@ -21,7 +21,8 @@ import {
   ModalModule,
   TagModule,
   TabsModule,
-  ToggleModule
+  ToggleModule,
+  DropdownModule
 } from 'carbon-components-angular';
 
 import { AppComponent } from './app.component';
@@ -45,6 +46,7 @@ import { SupportTicketsComponent } from './pages/support-tickets.component';
 import { CompanyDirectoryComponent } from './pages/company-directory.component';
 import { OnboardingQueueComponent } from './pages/onboarding-queue.component';
 import { CompanyDetailsComponent } from './pages/company-details.component';
+import { VendorOnboardingPage } from './pages/vendor-onboarding.page';
 import { AiAssistantInsightsComponent } from './pages/ai-assistant-insights.component';
 import { AiAssistantInsightDetailComponent } from './pages/ai-assistant-insight-detail.component';
 import { AiAssistantWorkflowComponent } from './pages/ai-assistant-workflow.component';
@@ -55,14 +57,15 @@ import { AgentStatusComponent } from './shared/components/agent-status/agent-sta
 import { AgentActivityLogComponent } from './shared/components/agent-activity-log/agent-activity-log.component';
 import { StepCorrectionModalComponent } from './shared/components/step-correction-modal/step-correction-modal.component';
 import { VendorLifecycleStepperComponent } from './shared/components/vendor-lifecycle-stepper/vendor-lifecycle-stepper.component';
-import { VendorOnboardingWizardComponent } from './shared/components/vendor-onboarding-wizard/vendor-onboarding-wizard.component';
 import { VendorSummaryCardComponent } from './shared/components/vendor-summary-card/vendor-summary-card.component';
 import { VendorComplianceSectionComponent } from './shared/components/vendor-compliance-section/vendor-compliance-section.component';
 import { VendorUsersSectionComponent } from './shared/components/vendor-users-section/vendor-users-section.component';
 import { VendorApiKeysSectionComponent } from './shared/components/vendor-api-keys-section/vendor-api-keys-section.component';
 import { VendorActivityLogSectionComponent } from './shared/components/vendor-activity-log-section/vendor-activity-log-section.component';
+import { ConfirmDialogComponent } from './shared/components/confirm-dialog/confirm-dialog.component';
 import { DataTableComponent } from './shared/components/data-table/data-table.component';
 import { AddVendorCompanyDrawerComponent } from './shared/components/add-vendor-company-drawer/add-vendor-company-drawer.component';
+import { UserDetailsDrawerComponent } from './shared/components/user-details-drawer/user-details-drawer.component';
 import { AiChatDockComponent } from './shared/components/ai-chat-dock/ai-chat-dock.component';
 import { AiAssistDrawerComponent } from './shared/components/ai-assist-drawer/ai-assist-drawer.component';
 import { TextInputComponent } from './shared/components/primitives/text-input/text-input.component';
@@ -145,6 +148,7 @@ import { routes } from './app.routes';
   ModalModule,
   TabsModule,
   ToggleModule,
+  DropdownModule,
     LumenIconComponent,
     DataTableComponent,
     // Admin pages (standalone components)
@@ -159,22 +163,25 @@ import { routes } from './app.routes';
     ApiCatalogPage,
     ApiWizardPage,
     ApiEditorPage,
+    // Vendor onboarding page (standalone component)
+    VendorOnboardingPage,
     SidebarNavComponent,
     BreadcrumbsComponent,
     CodeBlockComponent,
     AddVendorCompanyDrawerComponent,
+    UserDetailsDrawerComponent,
     AiChatDockComponent,
     AiAssistDrawerComponent,
     AgentStatusComponent,
     AgentActivityLogComponent,
     StepCorrectionModalComponent,
     VendorLifecycleStepperComponent,
-    VendorOnboardingWizardComponent,
     VendorSummaryCardComponent,
     VendorComplianceSectionComponent,
     VendorUsersSectionComponent,
     VendorApiKeysSectionComponent,
     VendorActivityLogSectionComponent,
+    ConfirmDialogComponent,
     RouterModule.forRoot(routes, { bindToComponentInputs: true }),
   ],
   providers: [],
