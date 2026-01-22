@@ -12,8 +12,7 @@ export const NAV_SECTIONS: NavSection[] = [
     id: 'vendors',
     label: 'Vendors',
     links: [
-      { label: 'Company Directory', path: '/vendors/companies', icon: 'building' },
-      { label: 'Onboarding Queue', path: '/vendors/onboarding', icon: 'document' }
+      { label: 'Vendor Directory', path: '/vendors/companies', icon: 'building' }
     ]
   },
   {

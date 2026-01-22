@@ -21,7 +21,7 @@ import { InputModule } from 'carbon-components-angular';
       <input
         [id]="inputId"
         ibmText
-        class="app-text-input"
+        class="app-text-input form-control"
         [placeholder]="placeholder"
         [ngModel]="value"
         [disabled]="disabled"
@@ -42,46 +42,17 @@ import { InputModule } from 'carbon-components-angular';
     }
 
     .text-input-label {
-      font-size: 0.75rem;
+      display: block;
+      font-size: 0.875rem;
       font-weight: 500;
-      color: var(--linear-text-secondary);
+      color: var(--form-control-text);
+      margin-bottom: var(--form-field-gap);
       line-height: 1.25rem;
     }
 
     .app-text-input {
-      height: 48px;
-      padding: 0 1rem;
-      font-size: 0.875rem;
-      line-height: 1.5;
-      border-radius: var(--radius-md);
-      background: #262626;
-      border: 1px solid #404040;
-      color: var(--linear-text-primary);
-      transition: all 0.2s ease;
-      box-sizing: border-box;
-      width: 100%;
-    }
-
-    .app-text-input::placeholder {
-      color: #737373;
-    }
-
-    .app-text-input:hover:not(:disabled) {
-      border-color: #525252;
-    }
-
-    .app-text-input:focus {
-      outline: none;
-      border-color: var(--linear-accent);
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-      background: #262626;
-    }
-
-    .app-text-input:disabled {
-      background: var(--field-disabled) !important;
-      border-color: var(--border-disabled) !important;
-      color: var(--text-placeholder);
-      cursor: not-allowed;
+      // Base styles come from .form-control class
+      // Component-specific overrides can go here if needed
     }
   `]
 })

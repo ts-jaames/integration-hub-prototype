@@ -33,24 +33,6 @@ interface ContextualSuggestion {
   standalone: true,
   imports: [CommonModule, FormsModule, ButtonModule, IconModule],
   template: `
-    <!-- Minimized FAB Button -->
-    <button 
-      *ngIf="!isExpanded()"
-      class="assistant-fab"
-      [class.has-suggestions]="hasProactiveSuggestions()"
-      [class.animating]="isAnimating()"
-      (click)="openAssistant()"
-      [attr.aria-label]="'Open AI Assistant'"
-      type="button">
-      <div class="fab-content">
-        <svg class="fab-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM13 17H11V15H13V17ZM13 13H11V7H13V13Z" fill="currentColor"/>
-        </svg>
-        <div class="fab-pulse" *ngIf="hasProactiveSuggestions()"></div>
-        <div class="fab-halo" *ngIf="hasProactiveSuggestions()"></div>
-      </div>
-    </button>
-
     <!-- Expanded Assistant Panel -->
     <div 
       class="assistant-panel"
@@ -64,7 +46,7 @@ interface ContextualSuggestion {
           <div class="header-title-group">
             <div class="assistant-avatar">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM13 17H11V15H13V17ZM13 13H11V7H13V13Z" fill="currentColor"/>
+                <path d="M12 2L14.4 8.2L21 9.2L16 14L17.4 21L12 17.8L6.6 21L8 14L3 9.2L9.6 8.2L12 2Z" fill="currentColor"/>
               </svg>
             </div>
             <div class="header-text">
@@ -94,7 +76,7 @@ interface ContextualSuggestion {
           <div *ngIf="messages().length === 0" class="welcome-state">
             <div class="welcome-icon">
               <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM13 17H11V15H13V17ZM13 13H11V7H13V13Z" fill="currentColor"/>
+                <path d="M12 2L14.4 8.2L21 9.2L16 14L17.4 21L12 17.8L6.6 21L8 14L3 9.2L9.6 8.2L12 2Z" fill="currentColor"/>
               </svg>
             </div>
             <h4 class="welcome-title">How can I help you today?</h4>
@@ -122,8 +104,8 @@ interface ContextualSuggestion {
             [class.user]="message.role === 'user'"
             [class.assistant]="message.role === 'assistant'">
             <div class="message-avatar" *ngIf="message.role === 'assistant'">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM13 17H11V15H13V17ZM13 13H11V7H13V13Z" fill="currentColor"/>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2L14.4 8.2L21 9.2L16 14L17.4 21L12 17.8L6.6 21L8 14L3 9.2L9.6 8.2L12 2Z" fill="currentColor"/>
               </svg>
             </div>
             <div class="message-content">
@@ -135,8 +117,8 @@ interface ContextualSuggestion {
           <!-- Typing Indicator -->
           <div *ngIf="sending()" class="message assistant">
             <div class="message-avatar">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM13 17H11V15H13V17ZM13 13H11V7H13V13Z" fill="currentColor"/>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2L14.4 8.2L21 9.2L16 14L17.4 21L12 17.8L6.6 21L8 14L3 9.2L9.6 8.2L12 2Z" fill="currentColor"/>
               </svg>
             </div>
             <div class="message-content">
@@ -178,121 +160,6 @@ interface ContextualSuggestion {
     </div>
   `,
   styles: [`
-    /* ===== FAB Button (Minimized State) ===== */
-    .assistant-fab {
-      position: fixed !important;
-      bottom: 1.5rem !important;
-      right: 1.5rem !important;
-      top: auto !important;
-      left: auto !important;
-      z-index: 1000;
-      width: 64px;
-      height: 64px;
-      border-radius: 50%;
-      border: none;
-      background: var(--assistant-fab-bg, linear-gradient(135deg, #0f62fe 0%, #0043ce 100%));
-      box-shadow: 
-        0 4px 16px rgba(15, 98, 254, 0.3),
-        0 2px 8px rgba(15, 98, 254, 0.2),
-        inset 0 1px 0 rgba(255, 255, 255, 0.2);
-      cursor: pointer;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      padding: 0;
-      margin: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: visible;
-    }
-
-    .assistant-fab:hover {
-      transform: translateY(-2px) scale(1.05);
-      box-shadow: 
-        0 8px 24px rgba(15, 98, 254, 0.4),
-        0 4px 12px rgba(15, 98, 254, 0.3),
-        inset 0 1px 0 rgba(255, 255, 255, 0.3);
-    }
-
-    .assistant-fab:active {
-      transform: translateY(0) scale(0.98);
-    }
-
-    .assistant-fab.has-suggestions {
-      animation: fabPulse 2s ease-in-out infinite;
-    }
-
-    .fab-content {
-      position: relative;
-      z-index: 2;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .fab-icon {
-      color: white;
-      filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
-    }
-
-    /* Pulse Animation for Proactive State */
-    .fab-pulse {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 100%;
-      height: 100%;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.4);
-      animation: pulseRing 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-      z-index: 1;
-    }
-
-    /* Gradient Halo Effect */
-    .fab-halo {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 120%;
-      height: 120%;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(15, 98, 254, 0.3) 0%, rgba(15, 98, 254, 0) 70%);
-      animation: haloGlow 2s ease-in-out infinite;
-      z-index: 0;
-    }
-
-    @keyframes fabPulse {
-      0%, 100% {
-        transform: scale(1);
-      }
-      50% {
-        transform: scale(1.05);
-      }
-    }
-
-    @keyframes pulseRing {
-      0% {
-        transform: translate(-50%, -50%) scale(1);
-        opacity: 1;
-      }
-      100% {
-        transform: translate(-50%, -50%) scale(1.5);
-        opacity: 0;
-      }
-    }
-
-    @keyframes haloGlow {
-      0%, 100% {
-        opacity: 0.6;
-        transform: translate(-50%, -50%) scale(1);
-      }
-      50% {
-        opacity: 1;
-        transform: translate(-50%, -50%) scale(1.1);
-      }
-    }
-
     /* ===== Assistant Panel (Expanded State) ===== */
     .assistant-panel {
       position: fixed;
@@ -722,15 +589,6 @@ interface ContextualSuggestion {
 
     /* ===== Responsive ===== */
     @media (max-width: 768px) {
-      .assistant-fab {
-        bottom: 1rem !important;
-        right: 1rem !important;
-        top: auto !important;
-        left: auto !important;
-        width: 56px;
-        height: 56px;
-      }
-
       .assistant-panel {
         bottom: 0;
         right: 0;
@@ -840,6 +698,15 @@ export class AiChatDockComponent implements OnInit, OnDestroy {
       this.isExpanded.set(false);
       this.isSlidingDown.set(false);
     }, 300);
+  }
+
+  /** Public method to toggle the assistant panel - can be called from parent components */
+  toggleAssistant() {
+    if (this.isExpanded()) {
+      this.closeAssistant();
+    } else {
+      this.openAssistant();
+    }
   }
 
   selectSuggestion(text: string) {

@@ -6,6 +6,7 @@ import { RoleService, UserRole, RoleConfig } from './core/role.service';
 import { SearchService, SearchResult } from './core/search.service';
 import { LumenIconComponent } from './shared/icons/lumen-icon.component';
 import { AuthStateService } from './sys-admin/services/auth-state.service';
+import { AiChatDockComponent } from './shared/components/ai-chat-dock/ai-chat-dock.component';
 import { filter, debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { Subject } from 'rxjs';
 
@@ -18,6 +19,7 @@ import { Subject } from 'rxjs';
 export class AppComponent implements OnInit, AfterViewInit {
   @ViewChild('searchInput', { static: false }) searchInput?: ElementRef<HTMLInputElement>;
   @ViewChild('roleSelectorContainer', { static: false }) roleSelectorContainer?: ElementRef<HTMLElement>;
+  @ViewChild(AiChatDockComponent, { static: false }) aiChatDock?: AiChatDockComponent;
   
   title = 'Integration Hub';
   currentTheme: Theme = 'light';
@@ -103,6 +105,10 @@ export class AppComponent implements OnInit, AfterViewInit {
 
   toggleTheme() {
     this.themeService.toggleTheme();
+  }
+
+  toggleAiAssistant() {
+    this.aiChatDock?.toggleAssistant();
   }
 
   selectRole(role: UserRole, event?: MouseEvent) {

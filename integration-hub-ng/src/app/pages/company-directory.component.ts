@@ -1,7 +1,9 @@
-import { Component, OnInit, signal, computed, inject } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, OnInit, OnDestroy, signal, computed, inject, effect } from '@angular/core';
+import { Router, NavigationEnd } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { filter } from 'rxjs/operators';
+import { Subscription } from 'rxjs';
 import {
   TableModule,
   TableModel,
@@ -13,10 +15,8 @@ import {
   ModalModule,
   SelectModule
 } from 'carbon-components-angular';
-import { VendorCompany, VendorStatus, VendorComplianceState, VendorOnboardingPhase } from '../shared/models/vendor-company.model';
+import { VendorCompany, VendorStatus, VendorComplianceState } from '../shared/models/vendor-company.model';
 import { DataTableComponent } from '../shared/components/data-table/data-table.component';
-import { AddVendorCompanyDrawerComponent } from '../shared/components/add-vendor-company-drawer/add-vendor-company-drawer.component';
-import { VendorOnboardingWizardComponent } from '../shared/components/vendor-onboarding-wizard/vendor-onboarding-wizard.component';
 import { VendorCompanyService } from '../shared/services/vendor-company.service';
 import { TextInputComponent } from '../shared/components/primitives/text-input/text-input.component';
 import { SelectComponent, SelectOption } from '../shared/components/primitives/select/select.component';
@@ -31,12 +31,11 @@ import { LoggerService } from '../core/services/logger.service';
     <div class="page-container">
       <div class="page-header">
         <div>
-          <h1>Vendor Companies</h1>
-          <p class="page-subtitle">Manage all vendor entities in the platform.</p>
+          <h1>Vendor Directory</h1>
+          <p class="page-subtitle">Manage all vendor entities in the platform — from draft to active.</p>
         </div>
         <div class="header-actions">
-          <button ibmButton="secondary" (click)="openOnboardingWizard()">New Vendor Onboarding</button>
-          <button ibmButton="primary" (click)="openNewCompanyModal()">New Company</button>
+          <button ibmButton="primary" (click)="navigateToOnboarding()" type="button">Add New Vendor</button>
         </div>
       </div>
 
@@ -72,11 +71,11 @@ import { LoggerService } from '../core/services/logger.service';
               </app-select>
               
               <app-select
-                label="Onboarding"
-                [options]="onboardingSelectOptions"
-                [ngModel]="selectedOnboardingPhase()"
-                (ngModelChange)="selectedOnboardingPhase.set($event); onSearchChange()"
-                ariaLabel="Filter by onboarding phase">
+                label="Show Archived"
+                [options]="showArchivedOptions"
+                [ngModel]="showArchived()"
+                (ngModelChange)="showArchived.set($event); onSearchChange()"
+                ariaLabel="Show archived vendors">
               </app-select>
             </div>
             
@@ -126,10 +125,10 @@ import { LoggerService } from '../core/services/logger.service';
               (remove)="clearCompliance()">
             </app-filter-chip>
             <app-filter-chip
-              *ngIf="selectedOnboardingPhase()"
-              label="Onboarding"
-              [value]="selectedOnboardingPhase()"
-              (remove)="clearOnboarding()">
+              *ngIf="showArchived() === 'true'"
+              label="Showing"
+              value="Archived"
+              (remove)="showArchived.set('false'); onSearchChange()">
             </app-filter-chip>
           </div>
         </div>
@@ -143,21 +142,8 @@ import { LoggerService } from '../core/services/logger.service';
           (rowClick)="onRowClick($event)">
         </app-data-table>
       </div>
+      
     </div>
-
-    <!-- Add Vendor Company Drawer -->
-    <app-add-vendor-company-drawer
-      [open]="drawerOpen()"
-      (closed)="closeDrawer()"
-      (saved)="onVendorCompanySaved($event)">
-    </app-add-vendor-company-drawer>
-
-    <!-- Vendor Onboarding Wizard -->
-    <app-vendor-onboarding-wizard
-      [open]="wizardOpen()"
-      (closed)="closeWizard()"
-      (completed)="onOnboardingCompleted($event)">
-    </app-vendor-onboarding-wizard>
 
     <!-- Edit Modal -->
     <ibm-modal
@@ -373,7 +359,7 @@ import { LoggerService } from '../core/services/logger.service';
     }
   `]
 })
-export class CompanyDirectoryComponent implements OnInit {
+export class CompanyDirectoryComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private vendorService = inject(VendorCompanyService);
   private logger = inject(LoggerService);
@@ -383,25 +369,24 @@ export class CompanyDirectoryComponent implements OnInit {
   searchQuery = signal('');
   selectedStatus = signal('');
   selectedComplianceState = signal('');
-  selectedOnboardingPhase = signal('');
+  showArchived = signal('false'); // Default to hide archived
   sortBy = signal('name');
   editModalOpen = signal(false);
   selectedCompany = signal<VendorCompany | null>(null);
-  drawerOpen = signal(false);
-  wizardOpen = signal(false);
   private isUpdatingTable = false;
+  private updateTableTimeout: any = null;
+  private routerSubscription?: Subscription;
 
-  statusOptions: VendorStatus[] = ['Pending', 'Approved', 'Rejected', 'Archived'];
+  statusOptions: VendorStatus[] = ['Draft', 'Pending Approval', 'Active', 'Rejected', 'Archived'];
   complianceStateOptions: VendorComplianceState[] = ['Complete', 'Missing Docs', 'Expired'];
-  onboardingPhaseOptions: VendorOnboardingPhase[] = ['New', 'In Review', 'Ready', 'Blocked'];
 
-  // Use static readonly properties instead of getters to avoid creating new arrays on every change detection
+  // Unified status options (excluding Archived by default - handled separately)
   readonly statusSelectOptions: SelectOption[] = [
-    { value: '', label: 'All' },
-    { value: 'Pending', label: 'Pending' },
-    { value: 'Approved', label: 'Approved' },
-    { value: 'Rejected', label: 'Rejected' },
-    { value: 'Archived', label: 'Archived' }
+    { value: '', label: 'All Statuses' },
+    { value: 'Draft', label: 'Draft' },
+    { value: 'Pending Approval', label: 'Pending Approval' },
+    { value: 'Active', label: 'Active' },
+    { value: 'Rejected', label: 'Rejected' }
   ];
 
   readonly complianceSelectOptions: SelectOption[] = [
@@ -411,12 +396,9 @@ export class CompanyDirectoryComponent implements OnInit {
     { value: 'Expired', label: 'Expired' }
   ];
 
-  readonly onboardingSelectOptions: SelectOption[] = [
-    { value: '', label: 'All' },
-    { value: 'New', label: 'New' },
-    { value: 'In Review', label: 'In Review' },
-    { value: 'Ready', label: 'Ready' },
-    { value: 'Blocked', label: 'Blocked' }
+  readonly showArchivedOptions: SelectOption[] = [
+    { value: 'false', label: 'Hide Archived' },
+    { value: 'true', label: 'Show Archived' }
   ];
 
   readonly sortSelectOptions: SelectOption[] = [
@@ -433,8 +415,13 @@ export class CompanyDirectoryComponent implements OnInit {
     const searchQuery = this.searchQuery();
     const selectedStatus = this.selectedStatus();
     const selectedComplianceState = this.selectedComplianceState();
-    const selectedOnboardingPhase = this.selectedOnboardingPhase();
+    const showArchived = this.showArchived();
     const sortBy = this.sortBy();
+    
+    // By default, exclude archived vendors unless explicitly showing them
+    if (showArchived !== 'true') {
+      filtered = filtered.filter(c => c.status !== 'Archived');
+    }
     
     // Search by name, DBA, or email
     if (searchQuery) {
@@ -459,15 +446,7 @@ export class CompanyDirectoryComponent implements OnInit {
       });
     }
     
-    // Filter by onboarding phase
-    if (selectedOnboardingPhase) {
-      filtered = filtered.filter(c => {
-        if (!c.onboardingPhase) return false;
-        return c.onboardingPhase === selectedOnboardingPhase;
-      });
-    }
-    
-    // Sort
+    // Sort (with status priority: Draft and Pending Approval first)
     filtered.sort((a, b) => {
       switch (sortBy) {
         case 'name':
@@ -477,7 +456,8 @@ export class CompanyDirectoryComponent implements OnInit {
         case 'updated':
           return new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime();
         case 'status':
-          return a.status.localeCompare(b.status);
+          const statusOrder = ['Draft', 'Pending Approval', 'Active', 'Rejected', 'Archived'];
+          return statusOrder.indexOf(a.status) - statusOrder.indexOf(b.status);
         default:
           return 0;
       }
@@ -491,21 +471,49 @@ export class CompanyDirectoryComponent implements OnInit {
       this.searchQuery() ||
       this.selectedStatus() ||
       this.selectedComplianceState() ||
-      this.selectedOnboardingPhase()
+      this.showArchived() === 'true'
     );
   });
 
+  constructor() {
+    // Automatically update table whenever filteredCompanies changes
+    effect(() => {
+      const filtered = this.filteredCompanies();
+      console.log('[CompanyDirectory] filteredCompanies changed, updating table with', filtered.length, 'vendors');
+      this.updateTableData();
+    });
+  }
+
   ngOnInit() {
-    this.loadVendors();
     this.buildTable();
+    this.loadVendors();
+
+    // Subscribe to router events to reload vendors when navigating back to this page
+    this.routerSubscription = this.router.events
+      .pipe(filter(event => event instanceof NavigationEnd))
+      .subscribe((event: any) => {
+        // Reload vendors if we're on the vendors/companies route
+        if (event.url === '/vendors/companies' || event.urlAfterRedirects === '/vendors/companies') {
+          this.logger.debug('Reloading vendors after navigation back to directory');
+          this.loadVendors();
+        }
+      });
+  }
+
+  ngOnDestroy() {
+    if (this.routerSubscription) {
+      this.routerSubscription.unsubscribe();
+    }
   }
 
   loadVendors() {
     this.loading.set(true);
+    this.logger.debug('Loading vendors from service');
     this.vendorService.getVendors().subscribe({
       next: (vendors) => {
+        this.logger.debug(`Loaded ${vendors.length} vendors`);
         this.companies.set(vendors);
-        this.updateTableData();
+        // Table will update automatically via effect
         this.loading.set(false);
       },
       error: (err) => {
@@ -518,48 +526,57 @@ export class CompanyDirectoryComponent implements OnInit {
   buildTable() {
     this.tableModel.header = [
       new TableHeaderItem({ data: 'Vendor Name' }),
-      new TableHeaderItem({ data: 'DBA' }),
       new TableHeaderItem({ data: 'Status' }),
-      new TableHeaderItem({ data: 'Compliance' }),
-      new TableHeaderItem({ data: 'Readiness' }),
+      new TableHeaderItem({ data: 'Onboarding Progress' }),
+      new TableHeaderItem({ data: 'Primary Contact' }),
       new TableHeaderItem({ data: 'Last Updated' })
     ];
-
-    this.updateTableData();
   }
 
   private updateTableData() {
-    // Prevent multiple simultaneous updates
-    if (this.isUpdatingTable) {
-      return;
+    // Clear any pending update
+    if (this.updateTableTimeout) {
+      clearTimeout(this.updateTableTimeout);
     }
     
-    this.isUpdatingTable = true;
-    
-    // Use setTimeout to defer the update and avoid change detection loops
-    setTimeout(() => {
+    // Debounce table updates to prevent infinite loops
+    this.updateTableTimeout = setTimeout(() => {
+      // Prevent multiple simultaneous updates
+      if (this.isUpdatingTable) {
+        return;
+      }
+      
+      this.isUpdatingTable = true;
+      
       try {
         const filtered = this.filteredCompanies();
         this.tableModel.data = filtered.map((company, index) => {
           // Store company ID in the first cell's expandedData for easy retrieval
           const firstCell = new TableItem({ 
-            data: company.name, 
+            data: company.name + (company.dba ? ` (${company.dba})` : ''), 
             expandedData: company.id,
             rawData: { companyId: company.id, index: index }
           });
+          
+          // Format onboarding progress
+          const progress = company.onboardingProgress;
+          const progressText = progress 
+            ? `${progress.completedSteps} of ${progress.totalSteps} steps`
+            : company.status === 'Active' ? 'Complete' : '—';
+          
           return [
             firstCell,
-            new TableItem({ data: company.dba || '—' }),
             new TableItem({ data: company.status }),
-            new TableItem({ data: company.complianceState || '—' }),
-            new TableItem({ data: company.readiness || '—' }),
+            new TableItem({ data: progressText }),
+            new TableItem({ data: `${company.primaryContact} (${company.primaryEmail})` }),
             new TableItem({ data: this.formatDate(company.updatedAt || company.createdAt) })
           ];
         });
       } finally {
         this.isUpdatingTable = false;
+        this.updateTableTimeout = null;
       }
-    }, 0);
+    }, 10); // Small delay to batch rapid updates
   }
 
   formatDate(dateString: string): string {
@@ -590,16 +607,11 @@ export class CompanyDirectoryComponent implements OnInit {
     this.updateTableData();
   }
 
-  clearOnboarding() {
-    this.selectedOnboardingPhase.set('');
-    this.updateTableData();
-  }
-
   clearAllFilters() {
     this.searchQuery.set('');
     this.selectedStatus.set('');
     this.selectedComplianceState.set('');
-    this.selectedOnboardingPhase.set('');
+    this.showArchived.set('false');
     this.updateTableData();
   }
 
@@ -671,34 +683,25 @@ export class CompanyDirectoryComponent implements OnInit {
     }
   }
 
-  openNewCompanyModal() {
-    this.drawerOpen.set(true);
-  }
 
-  closeDrawer() {
-    this.drawerOpen.set(false);
-  }
-
-  openOnboardingWizard() {
-    this.wizardOpen.set(true);
-  }
-
-  closeWizard() {
-    this.wizardOpen.set(false);
-  }
-
-  onOnboardingCompleted(data: any) {
-    this.logger.info('Onboarding completed', { data });
-    // In a real app, this would create the vendor company with lifecycle data
-    alert('Vendor onboarding completed! (Demo only - data not saved)');
-    // You could navigate to the new company detail page here
-    // this.router.navigate(['/vendors/companies', newCompanyId]);
-  }
-
-  onVendorCompanySaved(data: any) {
-    this.logger.info('Vendor company saved from drawer', { data });
-    // Reload vendors to get the new one
-    this.loadVendors();
+  navigateToOnboarding() {
+    console.log('navigateToOnboarding called - should navigate to /vendors/new/onboarding');
+    this.logger.info('Navigating to vendor onboarding page');
+    this.router.navigate(['/vendors/new/onboarding']).then(
+      (success) => {
+        console.log('Navigation result:', success);
+        if (success) {
+          this.logger.info('Navigation successful');
+        } else {
+          this.logger.error('Navigation failed - route not found');
+          console.error('Navigation failed - route not found');
+        }
+      },
+      (error) => {
+        this.logger.error('Navigation error', error);
+        console.error('Navigation error:', error);
+      }
+    );
   }
 }
 

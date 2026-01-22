@@ -18,7 +18,7 @@ import { InMemoryAdminApiService } from '../../services/in-memory-admin-api.serv
 import { User, RoleKey } from '../../models';
 import { StatusTagComponent } from '../../shared/components/status-tag/status-tag.component';
 import { RoleTagPipe } from '../../shared/pipes/role-tag.pipe';
-import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/confirm-dialog.component';
+import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { LoggerService } from '../../../core/services/logger.service';
 
 @Component({

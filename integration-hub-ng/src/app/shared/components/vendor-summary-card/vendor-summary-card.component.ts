@@ -148,10 +148,12 @@ export class VendorSummaryCardComponent {
 
   getStatusColor(status: string): TagType {
     switch (status) {
-      case 'Approved':
+      case 'Active':
         return 'green';
-      case 'Pending':
+      case 'Pending Approval':
         return 'blue';
+      case 'Draft':
+        return 'gray';
       case 'Rejected':
         return 'red';
       case 'Archived':

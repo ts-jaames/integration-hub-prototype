@@ -47,7 +47,7 @@ export class AuthStateService {
   });
 
   getCurrentUser() {
-    return this.currentUser.asReadonly();
+    return this.currentUser;
   }
 
   hasRole(role: RoleKey): boolean {

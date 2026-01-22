@@ -1,9 +1,28 @@
 import { VendorLifecycle, ComplianceStatus, IntegrationStatus } from './vendor-lifecycle.model';
 
-export type VendorStatus = 'Pending' | 'Approved' | 'Rejected' | 'Archived';
+/**
+ * Unified Vendor Status Model
+ * 
+ * - Draft: Onboarding started but not all required steps complete
+ * - Pending Approval: All onboarding steps completed, awaiting activation
+ * - Active: Vendor approved and activated, integrations allowed
+ * - Rejected: Vendor reviewed and not approved (requires rejection reason)
+ * - Archived: No longer active/relevant, hidden from default views
+ */
+export type VendorStatus = 'Draft' | 'Pending Approval' | 'Active' | 'Rejected' | 'Archived';
+
 export type VendorComplianceState = 'Complete' | 'Missing Docs' | 'Expired';
-export type VendorOnboardingPhase = 'New' | 'In Review' | 'Ready' | 'Blocked';
 export type VendorReadinessState = 'Ready' | 'Pending Requirements' | 'Blocked';
+
+/**
+ * Onboarding progress tracking (not a status, but metadata)
+ */
+export interface OnboardingProgress {
+  completedSteps: number;
+  totalSteps: number;
+  currentStep?: string;
+  lastUpdated?: string;
+}
 
 export interface VendorCompany {
   id: string;
@@ -19,7 +38,7 @@ export interface VendorCompany {
   createdAt: string;
   updatedAt: string;
   updatedBy?: string; // Actor who last updated
-  submittedAt?: string;
+  submittedAt?: string; // When onboarding was completed
   website?: string;
   address?: string;
   notes?: string;
@@ -29,11 +48,24 @@ export interface VendorCompany {
   lifecycle?: VendorLifecycle;
   compliance?: ComplianceStatus;
   integrationStatus?: IntegrationStatus;
-  // New fields for epic implementation
+  // Compliance and readiness
   complianceState?: VendorComplianceState;
-  onboardingPhase?: VendorOnboardingPhase;
   readiness?: VendorReadinessState;
   readinessBlockers?: string[]; // List of specific blockers
+  // Onboarding progress (metadata, not status)
+  onboardingProgress?: OnboardingProgress;
+  // Rejection tracking (for audit)
+  rejectionReason?: string;
+  rejectedAt?: string;
+  rejectedBy?: string;
+  // Archive tracking
+  archivedAt?: string;
+  archivedBy?: string;
+  archiveReason?: string;
+  // Activation tracking
+  activatedAt?: string;
+  activatedBy?: string;
+  // Related entities
   users?: VendorUser[];
   apiKeys?: VendorApiKey[];
   documents?: VendorDocument[];

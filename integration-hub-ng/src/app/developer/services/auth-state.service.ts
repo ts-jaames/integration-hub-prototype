@@ -49,7 +49,7 @@ export class DevAuthStateService {
   });
 
   getCurrentUser() {
-    return this.currentUser.asReadonly();
+    return this.currentUser;
   }
 
   hasRole(role: string): boolean {

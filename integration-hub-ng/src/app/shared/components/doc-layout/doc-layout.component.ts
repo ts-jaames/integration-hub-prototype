@@ -384,6 +384,7 @@ export class DocLayoutComponent implements OnInit, AfterViewInit, OnDestroy {
   
   private subscriptions = new Subscription();
   private resizeObserver?: ResizeObserver;
+  private logger = inject(LoggerService);
   
   constructor(private tocService: TocService) {}
   

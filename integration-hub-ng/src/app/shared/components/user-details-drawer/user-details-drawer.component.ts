@@ -32,40 +32,89 @@ import { LoggerService } from '../../../core/services/logger.service';
       class="user-details-drawer"
       [class.open]="isOpen">
       
-      <!-- Header -->
-      <div class="drawer-header">
-        <div class="header-content">
-          <div class="header-title-group">
-            <div class="header-text">
-              <h3 class="drawer-title">{{ getUserDisplayName() || 'User Details' }}</h3>
-              <p class="drawer-subtitle">{{ user?.email || '' }}</p>
-            </div>
-            <div class="header-status" *ngIf="user">
-              <ibm-tag [type]="getStatusTagType(user.status)" size="sm">
-                {{ user.status }}
-              </ibm-tag>
-            </div>
+      <!-- Sticky Header -->
+      <div class="drawer-header sticky-header">
+        <!-- Row 1: Name + Close -->
+        <div class="header-row header-row-primary">
+          <h3 class="drawer-title">{{ getUserDisplayName() || 'User Details' }}</h3>
+          <button 
+            ibmButton="ghost" 
+            size="sm"
+            class="close-button"
+            (click)="onClose()"
+            [attr.aria-label]="'Close drawer'"
+            type="button">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+        
+        <!-- Row 2: Email -->
+        <div class="header-row header-row-email">
+          <p class="drawer-subtitle">{{ user?.email || '' }}</p>
+        </div>
+        
+        <!-- Row 3: Status + Actions -->
+        <div class="header-row header-row-actions">
+          <div class="header-status" *ngIf="user">
+            <ibm-tag [type]="getStatusTagType(user.status)" size="sm">
+              {{ user.status }}
+            </ibm-tag>
           </div>
-          <div class="header-actions">
-            <button 
-              *ngIf="!editMode()"
-              ibmButton="secondary" 
-              size="sm"
-              (click)="enterEditMode()"
-              type="button">
-              Edit
-            </button>
-            <button 
-              ibmButton="ghost" 
-              size="sm"
-              class="close-button"
-              (click)="onClose()"
-              [attr.aria-label]="'Close drawer'"
-              type="button">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </button>
+          <div class="header-action-buttons">
+            <!-- View Mode Actions -->
+            <div *ngIf="!editMode()" class="action-buttons-group">
+              <button 
+                ibmButton="secondary" 
+                size="sm"
+                (click)="enterEditMode()"
+                type="button">
+                Edit
+              </button>
+              <button 
+                *ngIf="user && user.status === 'Active'"
+                ibmButton="secondary"
+                (click)="onDeactivate()"
+                [disabled]="isLastSystemAdmin()"
+                type="button">
+                Deactivate
+              </button>
+              <button 
+                *ngIf="user && (user.status === 'Deactivated' || user.status === 'Suspended')"
+                ibmButton="secondary"
+                (click)="onReactivate()"
+                type="button">
+                Reactivate
+              </button>
+              <button 
+                *ngIf="user && user.status === 'Invited'"
+                ibmButton="secondary"
+                (click)="onResendInvite()"
+                type="button">
+                Resend invite
+              </button>
+              <div class="action-helper" *ngIf="user && user.status === 'Active' && isLastSystemAdmin()">
+                Cannot deactivate the last System Admin
+              </div>
+            </div>
+            
+            <!-- Edit Mode Actions -->
+            <div *ngIf="editMode()" class="action-buttons-group">
+              <button 
+                ibmButton="secondary"
+                (click)="cancelEdit()"
+                type="button">
+                Cancel
+              </button>
+              <button 
+                ibmButton="primary"
+                (click)="saveChanges()"
+                [disabled]="editForm.invalid || saving()"
+                type="button">
+                Save changes
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -102,7 +151,7 @@ import { LoggerService } from '../../../core/services/logger.service';
               </div>
               <div class="detail-item" *ngIf="user?.lastLoginAt">
                 <label>Last Login</label>
-                <p>{{ formatDate(user.lastLoginAt) }}</p>
+                <p>{{ user.lastLoginAt ? formatDate(user.lastLoginAt) : '—' }}</p>
               </div>
               <div class="detail-item">
                 <label>Last Updated</label>
@@ -114,7 +163,7 @@ import { LoggerService } from '../../../core/services/logger.service';
               </div>
               <div class="detail-item" *ngIf="user?.invitedAt">
                 <label>Invitation Sent</label>
-                <p>{{ formatDate(user.invitedAt) }}</p>
+                <p>{{ user.invitedAt ? formatDate(user.invitedAt) : '—' }}</p>
               </div>
             </div>
           </div>
@@ -196,44 +245,6 @@ import { LoggerService } from '../../../core/services/logger.service';
         </ng-template>
       </div>
 
-      <!-- Footer -->
-      <div class="drawer-footer">
-        <div class="footer-actions" *ngIf="!editMode()">
-          <button 
-            *ngIf="user && user.status === 'Active'"
-            ibmButton="secondary"
-            (click)="onDeactivate()"
-            [disabled]="isLastSystemAdmin()"
-            type="button">
-            Deactivate
-          </button>
-          <button 
-            *ngIf="user && (user.status === 'Deactivated' || user.status === 'Suspended')"
-            ibmButton="secondary"
-            (click)="onReactivate()"
-            type="button">
-            Reactivate
-          </button>
-          <div class="footer-helper" *ngIf="isLastSystemAdmin()">
-            Cannot deactivate the last System Admin
-          </div>
-        </div>
-        <div class="footer-actions" *ngIf="editMode()">
-          <button 
-            ibmButton="secondary"
-            (click)="cancelEdit()"
-            type="button">
-            Cancel
-          </button>
-          <button 
-            ibmButton="primary"
-            (click)="saveChanges()"
-            [disabled]="editForm.invalid || saving()"
-            type="button">
-            Save changes
-          </button>
-        </div>
-      </div>
     </div>
   `,
   styles: [`
@@ -245,8 +256,6 @@ import { LoggerService } from '../../../core/services/logger.service';
       right: 0;
       bottom: 0;
       background: rgba(0, 0, 0, 0.4);
-      backdrop-filter: blur(4px);
-      -webkit-backdrop-filter: blur(4px);
       z-index: 999;
       opacity: 0;
       pointer-events: none;
@@ -266,7 +275,8 @@ import { LoggerService } from '../../../core/services/logger.service';
       bottom: 0;
       width: 480px;
       max-width: 90vw;
-      background: var(--linear-surface, #ffffff);
+      background: #1a1a1a !important;
+      opacity: 1 !important;
       box-shadow: 
         -4px 0 24px rgba(0, 0, 0, 0.15),
         -2px 0 8px rgba(0, 0, 0, 0.1);
@@ -282,84 +292,118 @@ import { LoggerService } from '../../../core/services/logger.service';
       transform: translateX(0);
     }
 
-    /* Header */
+    /* Sticky Header */
     .drawer-header {
       flex-shrink: 0;
       padding: 1.25rem 1.5rem;
-      border-bottom: 1px solid var(--linear-border, rgba(0, 0, 0, 0.08));
-      background: var(--linear-surface, rgba(255, 255, 255, 0.95));
+      border-bottom: 1px solid var(--linear-border, rgba(255, 255, 255, 0.1));
+      background: #1a1a1a !important;
+      opacity: 1 !important;
+      position: sticky;
+      top: 0;
+      z-index: 10;
     }
 
-    .header-content {
+    .header-row {
       display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
+      align-items: center;
       gap: 1rem;
     }
 
-    .header-title-group {
-      flex: 1;
-      min-width: 0;
+    .header-row-primary {
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
     }
 
-    .header-text {
-      margin-bottom: 0.5rem;
+    .header-row-email {
+      margin-bottom: 0.75rem;
+    }
+
+    .header-row-actions {
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.75rem;
     }
 
     .drawer-title {
       font-size: 1rem;
       font-weight: 600;
-      color: var(--linear-text-primary, #161616);
-      margin: 0 0 0.25rem 0;
+      color: var(--linear-text-primary, #f4f4f4);
+      margin: 0;
       line-height: 1.4;
+      flex: 1;
+      min-width: 0;
     }
 
     .drawer-subtitle {
       font-size: 0.875rem;
-      color: var(--linear-text-secondary, #6b6b6b);
+      color: var(--linear-text-secondary, #a8a8a8);
       margin: 0;
       line-height: 1.4;
     }
 
     .header-status {
-      margin-top: 0.5rem;
+      display: flex;
+      align-items: center;
     }
 
-    .header-actions {
+    .header-action-buttons {
       display: flex;
-      gap: 0.5rem;
       align-items: center;
-      flex-shrink: 0;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .action-buttons-group {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .action-helper {
+      font-size: 0.75rem;
+      color: var(--linear-text-secondary, #a8a8a8);
+      margin-left: 0.5rem;
+      white-space: nowrap;
     }
 
     .close-button {
-      color: var(--linear-text-secondary, #6b6b6b) !important;
+      color: var(--linear-text-secondary, #a8a8a8) !important;
       min-width: 32px;
       padding: 0.5rem;
       border-radius: 8px;
       transition: all 0.2s ease;
+      flex-shrink: 0;
     }
 
     .close-button:hover {
-      background: var(--linear-surface-hover, rgba(0, 0, 0, 0.05));
-      color: var(--linear-text-primary, #161616) !important;
+      background: var(--linear-surface-hover, rgba(255, 255, 255, 0.1));
+      color: var(--linear-text-primary, #f4f4f4) !important;
     }
 
     /* Body */
     .drawer-body {
       flex: 1;
       overflow-y: auto;
+      overflow-x: hidden;
       min-height: 0;
+      -webkit-overflow-scrolling: touch;
     }
 
     .drawer-content {
       padding: 1.5rem;
+      background: #1a1a1a !important;
+      opacity: 1 !important;
     }
 
     .no-user-message {
       padding: 2rem 1.5rem;
       text-align: center;
-      color: var(--linear-text-secondary, #6b6b6b);
+      color: var(--linear-text-secondary, #a8a8a8);
+      background: #1a1a1a !important;
+      opacity: 1 !important;
     }
 
     .no-user-message p {
@@ -382,14 +426,14 @@ import { LoggerService } from '../../../core/services/logger.service';
     .detail-item label {
       font-size: 0.75rem;
       font-weight: 500;
-      color: var(--linear-text-secondary, #6b6b6b);
+      color: var(--linear-text-secondary, #a8a8a8);
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
 
     .detail-item p {
       font-size: 0.875rem;
-      color: var(--linear-text-primary, #161616);
+      color: var(--linear-text-primary, #f4f4f4);
       margin: 0;
     }
 
@@ -415,7 +459,7 @@ import { LoggerService } from '../../../core/services/logger.service';
     .form-label {
       font-size: 0.875rem;
       font-weight: 500;
-      color: var(--form-control-text, #161616);
+      color: var(--form-control-text, #f4f4f4);
     }
 
     .required {
@@ -424,7 +468,7 @@ import { LoggerService } from '../../../core/services/logger.service';
 
     .helper-text {
       font-size: 0.75rem;
-      color: var(--linear-text-secondary, #6b6b6b);
+      color: var(--linear-text-secondary, #a8a8a8);
       margin-top: 0.25rem;
     }
 
@@ -433,9 +477,10 @@ import { LoggerService } from '../../../core/services/logger.service';
       flex-direction: column;
       gap: 0.75rem;
       padding: 1rem;
-      background: var(--linear-surface, #ffffff);
-      border: 1px solid var(--linear-border, rgba(0, 0, 0, 0.08));
+      background: #1a1a1a !important;
+      border: 1px solid var(--linear-border, rgba(255, 255, 255, 0.1));
       border-radius: 4px;
+      opacity: 1 !important;
     }
 
     .role-checkbox {
@@ -443,7 +488,7 @@ import { LoggerService } from '../../../core/services/logger.service';
       align-items: center;
       gap: 0.5rem;
       font-size: 0.875rem;
-      color: var(--linear-text-primary, #161616);
+      color: var(--linear-text-primary, #f4f4f4);
       cursor: pointer;
     }
 
@@ -457,26 +502,6 @@ import { LoggerService } from '../../../core/services/logger.service';
       margin-top: 0.25rem;
     }
 
-    /* Footer */
-    .drawer-footer {
-      flex-shrink: 0;
-      padding: 1rem 1.5rem;
-      border-top: 1px solid var(--linear-border, rgba(0, 0, 0, 0.08));
-      background: var(--linear-surface, rgba(255, 255, 255, 0.95));
-    }
-
-    .footer-actions {
-      display: flex;
-      gap: 0.75rem;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-
-    .footer-helper {
-      font-size: 0.75rem;
-      color: var(--linear-text-secondary, #6b6b6b);
-      margin-left: auto;
-    }
 
     /* Scrollbar */
     .drawer-body::-webkit-scrollbar {
@@ -488,12 +513,12 @@ import { LoggerService } from '../../../core/services/logger.service';
     }
 
     .drawer-body::-webkit-scrollbar-thumb {
-      background: rgba(0, 0, 0, 0.2);
+      background: rgba(255, 255, 255, 0.2);
       border-radius: 3px;
     }
 
     .drawer-body::-webkit-scrollbar-thumb:hover {
-      background: rgba(0, 0, 0, 0.3);
+      background: rgba(255, 255, 255, 0.3);
     }
   `]
 })
@@ -761,6 +786,23 @@ export class UserDetailsDrawerComponent implements OnInit, OnDestroy, OnChanges 
     const u = this.user;
     if (u) {
       this.reactivateRequested.emit(u);
+    }
+  }
+
+  onResendInvite() {
+    const u = this.user;
+    if (u) {
+      // Emit to parent to handle resend invite
+      this.usersService.resendInvite(u.id).subscribe({
+        next: () => {
+          this.logger.info(`Invite resent for ${u.email}`);
+          // Optionally refresh user data
+        },
+        error: (err) => {
+          this.logger.error('Error resending invite', err);
+          alert('Error resending invite: ' + (err.message || 'Unknown error'));
+        }
+      });
     }
   }
 
