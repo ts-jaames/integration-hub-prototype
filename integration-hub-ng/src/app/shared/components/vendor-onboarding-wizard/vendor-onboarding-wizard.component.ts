@@ -74,7 +74,7 @@ interface WizardStep {
 
           <div class="step-body">
             <!-- Step 1: Preparation -->
-            <div *ngIf="currentStepIndex() === 0" [formGroup]="preparationForm" class="step-form">
+            <div *ngIf="currentStepIndex() === 0" [formGroup]="intakeForm" class="step-form">
               <div class="form-group">
                 <label ibmLabel>
                   Internal Owner
@@ -98,9 +98,9 @@ interface WizardStep {
                   Preparation Notes
                   <textarea 
                     ibmText 
-                    formControlName="preparationNotes"
+                    formControlName="intakeNotes"
                     rows="4"
-                    placeholder="Add any internal preparation notes...">
+                    placeholder="Add any internal intake notes...">
                   </textarea>
                 </label>
               </div>
@@ -275,7 +275,7 @@ interface WizardStep {
                   </div>
                   <div class="summary-item">
                     <label>Target Go-Live</label>
-                    <p>{{ preparationForm.get('targetGoLiveDate')?.value || 'N/A' }}</p>
+                    <p>{{ intakeForm.get('targetGoLiveDate')?.value || 'N/A' }}</p>
                   </div>
                 </div>
               </div>
@@ -348,7 +348,7 @@ export class VendorOnboardingWizardComponent implements OnChanges, OnInit {
   
   closeWizard() {
     this.currentStepIndex.set(0);
-    this.preparationForm.reset();
+    this.intakeForm.reset();
     this.registrationForm.reset();
     this.validationData = { callbackUrl: '', sandboxEndpoint: '' };
     this.complianceData = {
@@ -364,10 +364,10 @@ export class VendorOnboardingWizardComponent implements OnChanges, OnInit {
 
   currentStepIndex = signal(0);
 
-  preparationForm: FormGroup = this.fb.group({
+  intakeForm: FormGroup = this.fb.group({
     internalOwner: ['', Validators.required],
     targetGoLiveDate: ['', Validators.required],
-    preparationNotes: ['']
+    intakeNotes: ['']
   });
 
   registrationForm: FormGroup = this.fb.group({
@@ -397,10 +397,10 @@ export class VendorOnboardingWizardComponent implements OnChanges, OnInit {
 
   steps = signal<WizardStep[]>([
     {
-      id: 'preparation',
-      stage: 'preparation',
-      title: 'Preparation',
-      description: 'Set up internal preparation details'
+      id: 'intake',
+      stage: 'intake',
+      title: 'Intake',
+      description: 'Set up internal intake details'
     },
     {
       id: 'registration',
@@ -416,7 +416,7 @@ export class VendorOnboardingWizardComponent implements OnChanges, OnInit {
     },
     {
       id: 'compliance',
-      stage: 'compliance-certification',
+      stage: 'compliance',
       title: 'Compliance',
       description: 'Review compliance requirements'
     },
@@ -436,7 +436,7 @@ export class VendorOnboardingWizardComponent implements OnChanges, OnInit {
     const index = this.currentStepIndex();
     
     if (index === 0) {
-      return this.preparationForm.valid;
+      return this.intakeForm.valid;
     }
     if (index === 1) {
       return this.registrationForm.valid;
@@ -471,7 +471,7 @@ export class VendorOnboardingWizardComponent implements OnChanges, OnInit {
 
   completeOnboarding() {
     const onboardingData = {
-      preparation: this.preparationForm.value,
+      intake: this.intakeForm.value,
       registration: this.registrationForm.value,
       validation: this.validationData,
       compliance: this.complianceData,

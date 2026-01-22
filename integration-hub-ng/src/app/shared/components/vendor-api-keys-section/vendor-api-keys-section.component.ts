@@ -246,7 +246,7 @@ export class VendorApiKeysSectionComponent implements OnInit, OnChanges {
   }
 
   canManageKeys(): boolean {
-    return this.vendor.status === 'Approved';
+    return this.vendor.status === 'Active';
   }
 
   buildGenerateForm() {

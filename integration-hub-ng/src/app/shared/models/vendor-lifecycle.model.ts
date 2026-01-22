@@ -1,9 +1,9 @@
 export type LifecycleStage = 
-  | 'preparation'
+  | 'intake'
   | 'registration'
   | 'validation'
-  | 'configuration-review'
-  | 'compliance-certification'
+  | 'configuration'
+  | 'compliance'
   | 'activation'
   | 'monitoring';
 

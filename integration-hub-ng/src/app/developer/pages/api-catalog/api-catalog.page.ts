@@ -19,7 +19,7 @@ import { InMemoryDevService } from '../../services/in-memory-dev.service';
 import { ApiEntity, ApiAuditLog, EnvKey } from '../../models';
 import { StatusTagPipe } from '../../shared/pipes/status-tag.pipe';
 import { DataTableComponent } from '../../../shared/components/data-table/data-table.component';
-import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/confirm-dialog.component';
+import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { LoggerService } from '../../../core/services/logger.service';
 
 @Component({

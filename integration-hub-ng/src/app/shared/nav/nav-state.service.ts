@@ -5,6 +5,7 @@ import { LoggerService } from '../../core/services/logger.service';
   providedIn: 'root'
 })
 export class NavStateService {
+  private logger = inject(LoggerService);
   private readonly STORAGE_KEY = 'nav-expanded-sections';
   
   // Signal to track expanded section IDs

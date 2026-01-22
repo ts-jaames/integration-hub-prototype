@@ -18,7 +18,7 @@ import { InMemoryDevService } from '../../services/in-memory-dev.service';
 import { ApiEntity, Backend, RouteDef, PolicyTemplate, AppliedPolicy, Deployment, EnvKey } from '../../models';
 import { StatusTagPipe } from '../../shared/pipes/status-tag.pipe';
 import { RightRailAnchorsComponent, Anchor } from '../../shared/components/right-rail-anchors/right-rail-anchors.component';
-import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/confirm-dialog.component';
+import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { LoggerService } from '../../../core/services/logger.service';
 
 @Component({

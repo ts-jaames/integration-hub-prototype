@@ -28,8 +28,8 @@ import { UsageAnalyticsComponent } from './pages/usage-analytics.component';
 import { PlatformSettingsComponent } from './pages/platform-settings.component';
 import { SupportTicketsComponent } from './pages/support-tickets.component';
 import { CompanyDirectoryComponent } from './pages/company-directory.component';
-import { OnboardingQueueComponent } from './pages/onboarding-queue.component';
 import { CompanyDetailsComponent } from './pages/company-details.component';
+import { VendorOnboardingPage } from './pages/vendor-onboarding.page';
 import { AiAssistantInsightsComponent } from './pages/ai-assistant-insights.component';
 import { AiAssistantInsightDetailComponent } from './pages/ai-assistant-insight-detail.component';
 import { AiAssistantWorkflowComponent } from './pages/ai-assistant-workflow.component';
@@ -78,12 +78,12 @@ export const routes: Routes = [
     component: CompanyDirectoryComponent
   },
   {
-    path: 'vendors/companies/:id',
-    component: CompanyDetailsComponent
+    path: 'vendors/new/onboarding',
+    component: VendorOnboardingPage
   },
   {
-    path: 'vendors/onboarding',
-    component: OnboardingQueueComponent
+    path: 'vendors/companies/:id',
+    component: CompanyDetailsComponent
   },
   
   // AI Assistant routes

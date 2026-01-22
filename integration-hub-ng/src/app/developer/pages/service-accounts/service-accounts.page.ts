@@ -18,7 +18,7 @@ import {
 import { InMemoryDevService } from '../../services/in-memory-dev.service';
 import { ServiceAccount, ApiKey, EnvKey, ApiCall } from '../../models';
 import { StatusTagPipe } from '../../shared/pipes/status-tag.pipe';
-import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/confirm-dialog.component';
+import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { CopyToClipboardDirective } from '../../shared/directives/copy-to-clipboard.directive';
 import { DataTableComponent } from '../../../shared/components/data-table/data-table.component';
 import { RightRailAnchorsComponent, Anchor } from '../../shared/components/right-rail-anchors/right-rail-anchors.component';

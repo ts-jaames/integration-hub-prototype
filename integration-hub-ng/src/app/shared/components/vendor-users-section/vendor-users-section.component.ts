@@ -202,7 +202,7 @@ export class VendorUsersSectionComponent implements OnInit, OnChanges {
   }
 
   canManageUsers(): boolean {
-    return this.vendor.status === 'Approved';
+    return this.vendor.status === 'Active';
   }
 
   buildInviteForm() {

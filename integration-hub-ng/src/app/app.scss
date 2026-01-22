@@ -629,6 +629,44 @@
   }
 }
 
+.ai-toggle-top {
+  background: transparent;
+  border: 1px solid var(--linear-border);
+  border-radius: 8px;
+  padding: 0.5rem;
+  cursor: pointer;
+  color: var(--linear-text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 150ms ease;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  
+  &:hover {
+    background: var(--linear-surface-hover);
+    color: var(--linear-text-primary);
+    border-color: var(--linear-border);
+  }
+  
+  &:active {
+    transform: scale(0.98);
+  }
+  
+  &.active {
+    background: rgba(15, 98, 254, 0.15);
+    color: var(--linear-accent, #0f62fe);
+    border-color: var(--linear-accent, #0f62fe);
+  }
+  
+  svg {
+    width: 18px;
+    height: 18px;
+    stroke-width: 1.5;
+  }
+}
+
 .theme-toggle-top {
   background: transparent;
   border: 1px solid var(--linear-border);
@@ -663,13 +701,17 @@
 
 .main-content {
   flex: 1;
-  max-width: 1020px;
+  max-width: 1440px;
   width: 100%;
   margin: 0 auto;
   padding: 3rem 2rem;
   
   @media (max-width: 672px) {
     padding: 2rem 1.5rem;
+  }
+
+  &.border {
+    border-right: 1px solid var(--linear-border);
   }
 }
 
@@ -740,9 +782,11 @@
   input[type="url"],
   input[type="date"],
   textarea {
-    background: #262626 !important;
-    border: 1px solid #404040 !important;
-    color: #f5f5f5 !important;
+    background: #0d1425 !important;
+    border: .5px solid #ffffff24 !important;
+    color: #fafafa !important;
+    margin-top: 8px !important;
+    border-radius: 4px !important;
   }
 
   .bx--text-input::placeholder,
@@ -761,8 +805,8 @@
   input:focus,
   textarea:focus {
     border-color: #3b82f6 !important;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
-    background: #262626 !important;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1) !important;
+    background: #090e1a !important;
     color: #f5f5f5 !important;
   }
 
@@ -770,9 +814,11 @@
   .bx--select-input,
   .cds--select-input,
   select {
-    background: #262626 !important;
-    border: 1px solid #404040 !important;
+    background: #0d1425 !important;
+    border: .5px solid #ffffff24 !important;
     color: #f5f5f5 !important;
+    margin-top: 8px !important;
+    border-radius: 4px !important;
   }
 
   .bx--select-input:focus,
@@ -786,7 +832,9 @@
   .bx--label,
   .cds--label,
   label {
-    color: #e5e5e5 !important;
+    color: var(--linear-text-secondary);
+    opacity: 0.6;
+    font-size: 12px !important;
   }
 
   // Close button

@@ -103,7 +103,7 @@ export class CompaniesComponent implements OnInit {
     
     this.companiesTableModel.data = [
       [new TableItem({ data: 'Acme Corp' }), new TableItem({ data: 'Enterprise' }), new TableItem({ data: 'Active' }), new TableItem({ data: '12' }), new TableItem({ data: '2024-01-15' })],
-      [new TableItem({ data: 'TechStart Inc' }), new TableItem({ data: 'Standard' }), new TableItem({ data: 'Pending' }), new TableItem({ data: '3' }), new TableItem({ data: '2024-02-20' })]
+      [new TableItem({ data: 'TechStart Inc' }), new TableItem({ data: 'Standard' }), new TableItem({ data: 'Pending Approval' }), new TableItem({ data: '3' }), new TableItem({ data: '2024-02-20' })]
     ];
   }
 }

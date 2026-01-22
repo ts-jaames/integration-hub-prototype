@@ -34,9 +34,9 @@ export class ApiClientService {
     const url = this.buildUrl(endpoint);
     this.logger.debug(`GET ${url}`, options);
     
-    return this.http.get<T>(url, options).pipe(
+    return this.http.get<T>(url, (options || {}) as any).pipe(
       catchError(error => this.handleError(error, 'GET', endpoint))
-    );
+    ) as Observable<T>;
   }
 
   /**
@@ -46,9 +46,9 @@ export class ApiClientService {
     const url = this.buildUrl(endpoint);
     this.logger.debug(`POST ${url}`, body);
     
-    return this.http.post<T>(url, body, options).pipe(
+    return this.http.post<T>(url, body, (options || {}) as any).pipe(
       catchError(error => this.handleError(error, 'POST', endpoint))
-    );
+    ) as Observable<T>;
   }
 
   /**
@@ -58,9 +58,9 @@ export class ApiClientService {
     const url = this.buildUrl(endpoint);
     this.logger.debug(`PUT ${url}`, body);
     
-    return this.http.put<T>(url, body, options).pipe(
+    return this.http.put<T>(url, body, (options || {}) as any).pipe(
       catchError(error => this.handleError(error, 'PUT', endpoint))
-    );
+    ) as Observable<T>;
   }
 
   /**
@@ -70,9 +70,9 @@ export class ApiClientService {
     const url = this.buildUrl(endpoint);
     this.logger.debug(`PATCH ${url}`, body);
     
-    return this.http.patch<T>(url, body, options).pipe(
+    return this.http.patch<T>(url, body, (options || {}) as any).pipe(
       catchError(error => this.handleError(error, 'PATCH', endpoint))
-    );
+    ) as Observable<T>;
   }
 
   /**
@@ -82,9 +82,9 @@ export class ApiClientService {
     const url = this.buildUrl(endpoint);
     this.logger.debug(`DELETE ${url}`, options);
     
-    return this.http.delete<T>(url, options).pipe(
+    return this.http.delete<T>(url, (options || {}) as any).pipe(
       catchError(error => this.handleError(error, 'DELETE', endpoint))
-    );
+    ) as Observable<T>;
   }
 
   /**

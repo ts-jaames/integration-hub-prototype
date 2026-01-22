@@ -53,14 +53,14 @@ export class ThemeService {
     
     if (theme === 'dark') {
       // Modern dark theme colors
-      root.style.setProperty('--linear-bg', '#060e19');
+      root.style.setProperty('--linear-bg', '#020713');
       root.style.setProperty('--linear-surface', '#09132185');
       root.style.setProperty('--linear-surface-hover', '#222223');
       root.style.setProperty('--linear-border', '#2A2A2C');
-      root.style.setProperty('--linear-text-primary', '#FAFAFA');
-      root.style.setProperty('--linear-text-secondary', '#9A9A9C');
-      root.style.setProperty('--linear-accent', '#3B82F6');
-      root.style.setProperty('--linear-accent-hover', '#60A5FA');
+      root.style.setProperty('--linear-text-primary', '#ffffffcf');
+      root.style.setProperty('--linear-text-secondary', '#ffffff9c');
+      root.style.setProperty('--linear-accent', '#0098d1');
+      root.style.setProperty('--linear-accent-hover', '#00aeeb');
     } else {
       // Light theme colors - off-white background with dark gray text
       root.style.setProperty('--linear-bg', '#FAF9F6');
@@ -69,8 +69,8 @@ export class ThemeService {
       root.style.setProperty('--linear-border', '#E5E4E0');
       root.style.setProperty('--linear-text-primary', '#262626');
       root.style.setProperty('--linear-text-secondary', '#6B6B6B');
-      root.style.setProperty('--linear-accent', '#3B82F6');
-      root.style.setProperty('--linear-accent-hover', '#2563EB');
+      root.style.setProperty('--linear-accent', '#0098d1');
+      root.style.setProperty('--linear-accent-hover', '#007ba5');
     }
     
     // Update Carbon theme variables

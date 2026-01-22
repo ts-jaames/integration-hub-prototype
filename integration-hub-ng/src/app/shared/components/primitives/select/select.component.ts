@@ -26,7 +26,7 @@ export interface SelectOption {
       <select
         [id]="selectId"
         ibmSelect
-        class="app-select"
+        class="app-select form-control"
         [ngModel]="value"
         [disabled]="disabled"
         [attr.aria-label]="ariaLabel || label"
@@ -49,54 +49,22 @@ export interface SelectOption {
     }
 
     .select-label {
-      font-size: 0.75rem;
+      display: block;
+      font-size: 0.875rem;
       font-weight: 500;
-      color: var(--linear-text-secondary);
+      color: var(--form-control-text);
+      margin-bottom: var(--form-field-gap);
       line-height: 1.25rem;
     }
 
     .app-select {
-      height: 48px;
-      padding: 0 1rem;
-      font-size: 0.875rem;
-      line-height: 1.5;
-      border-radius: var(--radius-md);
-      background: #262626;
-      border: 1px solid #404040;
-      color: var(--linear-text-primary);
-      transition: all 0.2s ease;
-      box-sizing: border-box;
-      width: 100%;
-      cursor: pointer;
-      appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='%23f5f5f5' d='M8 11L3 6h10z'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 0.75rem center;
-      padding-right: 2.5rem;
-    }
-
-    .app-select:hover:not(:disabled) {
-      border-color: #525252;
-    }
-
-    .app-select:focus {
-      outline: none;
-      border-color: var(--linear-accent);
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-      background-color: #262626;
-    }
-
-    .app-select:disabled {
-      background: var(--field-disabled) !important;
-      border-color: var(--border-disabled) !important;
-      color: var(--text-placeholder);
-      cursor: not-allowed;
-      opacity: 0.6;
+      // Base styles come from .form-control class
+      // Select-specific styles (dropdown arrow) are handled in global styles
     }
 
     .app-select option {
-      background: #262626;
-      color: var(--linear-text-primary);
+      background: var(--form-control-bg);
+      color: var(--form-control-text);
     }
   `]
 })

@@ -1,0 +1,307 @@
+/**
+ * Standardized Form Control Styles
+ * 
+ * Provides consistent styling for all form inputs, textareas, and selects
+ * across the entire application.
+ */
+
+// ============================================
+// CSS Variables (Design Tokens)
+// ============================================
+:root {
+  // Form Control Colors - Dark theme
+  --form-control-bg: #0f172a;
+  --form-control-text: #FAFAFA;
+  --form-control-placeholder: #94a3b8;
+  --form-control-border: #334155;
+  --form-control-border-focus: #3b82f6;
+  --form-control-border-error: #ef4444;
+  --form-control-bg-disabled: #1e293b;
+  --form-control-text-disabled: #64748b;
+  --form-control-border-disabled: #1e293b;
+
+  // Form Control Dimensions
+  --form-control-height: 44px;
+  --form-control-padding-x: 14px;
+  --form-control-padding-y: 12px;
+  --form-control-border-radius: 10px;
+  --form-control-font-size: 14px;
+  --form-control-line-height: 1.5;
+
+  // Form Control Focus
+  --form-control-focus-ring: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  --form-control-focus-ring-offset: 0;
+
+  // Form Control Spacing
+  --form-field-gap: 0.5rem; // Gap between label and control
+  --form-field-margin-bottom: 1.5rem; // Margin between stacked fields
+
+  // Textarea specific
+  --form-control-textarea-min-height: 120px;
+}
+
+// ============================================
+// Mixin for form control styles (for reuse)
+// ============================================
+@mixin form-control-base {
+  // Layout
+  width: 100%;
+  height: var(--form-control-height);
+  padding: var(--form-control-padding-y) var(--form-control-padding-x);
+  box-sizing: border-box;
+
+  // Typography
+  font-family: inherit;
+  font-size: var(--form-control-font-size);
+  line-height: var(--form-control-line-height);
+  color: var(--form-control-text);
+
+  // Appearance
+  background-color: var(--form-control-bg);
+  border: 1px solid var(--form-control-border);
+  border-radius: var(--form-control-border-radius);
+
+  // Interaction
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  outline: none;
+
+  // Placeholder
+  &::placeholder {
+    color: var(--form-control-placeholder);
+    opacity: 1;
+  }
+
+  // Hover state
+  &:hover:not(:disabled):not(:read-only) {
+    border-color: var(--form-control-border-focus);
+  }
+
+  // Focus state
+  &:focus:not(:disabled):not(:read-only) {
+    border-color: var(--form-control-border-focus);
+    box-shadow: var(--form-control-focus-ring);
+    background-color: var(--form-control-bg);
+  }
+
+  // Disabled state
+  &:disabled {
+    background-color: var(--form-control-bg-disabled);
+    border-color: var(--form-control-border-disabled);
+    color: var(--form-control-text-disabled);
+    cursor: not-allowed;
+    opacity: 1;
+
+    &::placeholder {
+      color: var(--form-control-text-disabled);
+    }
+  }
+
+  // Read-only state
+  &:read-only {
+    background-color: var(--form-control-bg-disabled);
+    cursor: default;
+  }
+
+  // Error/Invalid state
+  &.is-invalid,
+  &:invalid {
+    border-color: var(--form-control-border-error);
+
+    &:focus {
+      border-color: var(--form-control-border-error);
+      box-shadow: 0 0 0 3px rgba(218, 30, 40, 0.1);
+    }
+  }
+}
+
+// ============================================
+// Base Form Control Styles
+// ============================================
+
+/**
+ * .form-control - Base class for all form controls
+ * Apply this class to inputs, textareas, and selects
+ */
+.form-control,
+input.form-control,
+textarea.form-control,
+select.form-control {
+  @include form-control-base;
+}
+
+// ============================================
+// Textarea Specific Styles
+// ============================================
+textarea.form-control {
+  min-height: var(--form-control-textarea-min-height);
+  height: auto;
+  resize: vertical;
+  padding-top: var(--form-control-padding-y);
+  padding-bottom: var(--form-control-padding-y);
+}
+
+// ============================================
+// Select Specific Styles
+// ============================================
+select.form-control {
+  // Ensure select matches input height
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23FAFAFA' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--form-control-padding-x) center;
+  padding-right: calc(var(--form-control-padding-x) * 2 + 12px);
+  cursor: pointer;
+
+  &:disabled {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  }
+}
+
+// ============================================
+// Form Label Styles
+// ============================================
+.form-label,
+label.form-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--form-control-text);
+  margin-bottom: var(--form-field-gap);
+  line-height: 1.25rem;
+
+  &.required::after {
+    content: ' *';
+    color: var(--form-control-border-error);
+  }
+}
+
+// ============================================
+// Form Field Wrapper
+// ============================================
+.form-field {
+  margin-bottom: var(--form-field-margin-bottom);
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+// ============================================
+// Global Base Selectors (with exclusions)
+// ============================================
+// Apply to native inputs/selects/textareas that don't have form-control class
+// Exclude special cases like search chips, hidden inputs, etc.
+input[type="text"]:not(.cds--search-input):not([class*="chip"]):not([class*="tag"]):not([type="hidden"]),
+input[type="email"]:not(.cds--search-input):not([class*="chip"]):not([class*="tag"]):not([type="hidden"]),
+input[type="tel"]:not(.cds--search-input):not([class*="chip"]):not([class*="tag"]):not([type="hidden"]),
+input[type="number"]:not(.cds--search-input):not([class*="chip"]):not([class*="tag"]):not([class*="pagination"]):not([type="hidden"]),
+input[type="search"]:not(.cds--search-input):not([class*="chip"]):not([class*="tag"]):not([type="hidden"]),
+input[type="password"]:not(.cds--search-input):not([class*="chip"]):not([class*="tag"]):not([type="hidden"]),
+input[type="date"]:not(.cds--search-input):not([class*="chip"]):not([class*="tag"]):not([type="hidden"]) {
+  @include form-control-base;
+}
+
+textarea:not([class*="chip"]):not([class*="tag"]) {
+  @include form-control-base;
+  min-height: var(--form-control-textarea-min-height);
+  height: auto;
+  resize: vertical;
+  padding-top: var(--form-control-padding-y);
+  padding-bottom: var(--form-control-padding-y);
+}
+
+select:not([class*="chip"]):not([class*="tag"]):not([class*="pagination"]) {
+  @include form-control-base;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23FAFAFA' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--form-control-padding-x) center;
+  padding-right: calc(var(--form-control-padding-x) * 2 + 12px);
+  cursor: pointer;
+
+  &:disabled {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  }
+}
+
+// ============================================
+// Carbon Design System Overrides
+// ============================================
+// Ensure Carbon components also use our standardized styles
+.cds--text-input {
+  @include form-control-base;
+}
+
+.cds--text-area {
+  @include form-control-base;
+  min-height: var(--form-control-textarea-min-height);
+  height: auto;
+  resize: vertical;
+  padding-top: var(--form-control-padding-y);
+  padding-bottom: var(--form-control-padding-y);
+}
+
+.cds--select-input {
+  @include form-control-base;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23FAFAFA' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--form-control-padding-x) center;
+  padding-right: calc(var(--form-control-padding-x) * 2 + 12px);
+  cursor: pointer;
+
+  &:disabled {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  }
+}
+
+// Carbon select wrapper adjustments
+.cds--select-input-wrapper {
+  .cds--select-input {
+    @include form-control-base;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23FAFAFA' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right var(--form-control-padding-x) center;
+    padding-right: calc(var(--form-control-padding-x) * 2 + 12px);
+    cursor: pointer;
+  }
+}
+
+// ============================================
+// Dark UI Compatibility
+// ============================================
+// Since we're using dark theme globally, these are the same
+// Kept for consistency if we need lighter theme variants later
+.dark-ui,
+[class*="dark"],
+[class*="vendor-onboarding"],
+.bx--modal.vendor-onboarding-modal,
+.vendor-onboarding-modal {
+  --form-control-bg: #0f172a;
+  --form-control-text: #FAFAFA;
+  --form-control-placeholder: #94a3b8;
+  --form-control-border: #334155;
+  --form-control-border-focus: #3b82f6;
+  --form-control-bg-disabled: #1e293b;
+  --form-control-text-disabled: #64748b;
+  --form-control-border-disabled: #1e293b;
+}
+
+// ============================================
+// Helper Classes
+// ============================================
+.form-control-sm {
+  --form-control-height: 36px;
+  --form-control-padding-y: 8px;
+  --form-control-padding-x: 12px;
+  --form-control-font-size: 13px;
+}
+
+.form-control-lg {
+  --form-control-height: 52px;
+  --form-control-padding-y: 14px;
+  --form-control-padding-x: 16px;
+  --form-control-font-size: 16px;
+}
+

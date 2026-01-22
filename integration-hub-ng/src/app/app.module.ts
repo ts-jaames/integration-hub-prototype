@@ -44,7 +44,6 @@ import { UsageAnalyticsComponent } from './pages/usage-analytics.component';
 import { PlatformSettingsComponent } from './pages/platform-settings.component';
 import { SupportTicketsComponent } from './pages/support-tickets.component';
 import { CompanyDirectoryComponent } from './pages/company-directory.component';
-import { OnboardingQueueComponent } from './pages/onboarding-queue.component';
 import { CompanyDetailsComponent } from './pages/company-details.component';
 import { VendorOnboardingPage } from './pages/vendor-onboarding.page';
 import { AiAssistantInsightsComponent } from './pages/ai-assistant-insights.component';
@@ -113,7 +112,6 @@ import { routes } from './app.routes';
     PlatformSettingsComponent,
     SupportTicketsComponent,
     CompanyDirectoryComponent,
-    OnboardingQueueComponent,
     CompanyDetailsComponent,
     AiAssistantInsightsComponent,
     AiAssistantInsightDetailComponent,

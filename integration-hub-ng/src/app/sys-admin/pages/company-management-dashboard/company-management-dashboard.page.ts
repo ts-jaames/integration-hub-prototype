@@ -20,7 +20,7 @@ import { InMemoryAdminApiService } from '../../services/in-memory-admin-api.serv
 import { Company, CompanyStatus } from '../../models';
 import { StatusTagComponent } from '../../shared/components/status-tag/status-tag.component';
 import { TableEmptyStateComponent } from '../../shared/components/table-empty-state/table-empty-state.component';
-import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/confirm-dialog.component';
+import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { RightRailAnchorsComponent, Anchor } from '../../shared/components/right-rail-anchors/right-rail-anchors.component';
 import { LoggerService } from '../../../core/services/logger.service';
 
