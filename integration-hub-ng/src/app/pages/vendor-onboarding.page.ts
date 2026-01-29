@@ -20,6 +20,25 @@ interface OnboardingStep {
   completed: boolean;
 }
 
+type ComplianceStatus = 'not_started' | 'in_progress' | 'complete';
+
+interface ComplianceEvidence {
+  name: string;
+  size: number;
+  type: string;
+  uploadedAt: string;
+}
+
+interface ComplianceRequirement {
+  id: string;
+  name: string;
+  status: ComplianceStatus;
+  owner: string;
+  evidence: ComplianceEvidence[];
+  dateCompleted: string;
+  notes: string;
+}
+
 interface ParsedVendorInfo {
   // Intake fields
   vendorType?: string;
@@ -452,44 +471,125 @@ interface ParsedVendorInfo {
             <div *ngIf="currentStepIndex() === 3" class="step-form">
               <div class="section-header">
                 <h2>Compliance</h2>
-                <p>Confirm required reviews and documentation.</p>
+                <p>Complete required reviews and documentation. Each item can be worked on independently.</p>
               </div>
 
-              <div class="checkbox-field">
-                <input type="checkbox" id="securityReview" [(ngModel)]="complianceData.securityReview" (ngModelChange)="onComplianceChange()" [ngModelOptions]="{standalone: true}">
-                <label for="securityReview">Security review complete</label>
-              </div>
-
-              <div class="checkbox-field">
-                <input type="checkbox" id="docReceived" [(ngModel)]="complianceData.documentationReceived" (ngModelChange)="onComplianceChange()" [ngModelOptions]="{standalone: true}">
-                <label for="docReceived">Required documentation received</label>
-              </div>
-
-              <div class="checkbox-field">
-                <input type="checkbox" id="dataAgreement" [(ngModel)]="complianceData.dataAgreementSigned" (ngModelChange)="onComplianceChange()" [ngModelOptions]="{standalone: true}">
-                <label for="dataAgreement">Data processing agreement signed</label>
-              </div>
-
-              <div class="checkbox-field">
-                <input type="checkbox" id="apimPolicies" [(ngModel)]="complianceData.apimPoliciesApplied" (ngModelChange)="onComplianceChange()" [ngModelOptions]="{standalone: true}">
-                <label for="apimPolicies">APIM policies applied</label>
-              </div>
-
-              <div class="form-divider"></div>
-
-              <div class="form-field">
-                <label>Compliance Owner</label>
-                <input type="text" [(ngModel)]="complianceData.complianceOwner" placeholder="Enter compliance owner name" [ngModelOptions]="{standalone: true}">
-              </div>
-
-              <div class="form-field">
-                <label>Date Completed</label>
-                <input type="date" [(ngModel)]="complianceData.dateCompleted" [ngModelOptions]="{standalone: true}">
-              </div>
-
-              <div class="form-field">
-                <label>Notes</label>
-                <textarea [(ngModel)]="complianceData.notes" rows="3" placeholder="Add any compliance notes..." [ngModelOptions]="{standalone: true}"></textarea>
+              <div class="compliance-requirements">
+                <div 
+                  *ngFor="let req of complianceRequirements()" 
+                  class="compliance-item"
+                  [class.expanded]="isComplianceExpanded(req.id)"
+                  [class.complete]="req.status === 'complete'"
+                  [class.in-progress]="req.status === 'in_progress'">
+                  
+                  <!-- Collapsed Header -->
+                  <div class="compliance-header" (click)="toggleComplianceExpand(req.id)">
+                    <div class="compliance-header-left">
+                      <span class="compliance-status-indicator" [class]="getStatusClass(req.status)">
+                        <svg *ngIf="req.status === 'complete'" width="12" height="12" viewBox="0 0 12 12" fill="none">
+                          <path d="M2 6L5 9L10 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                      </span>
+                      <span class="compliance-name">{{ req.name }}</span>
+                    </div>
+                    <div class="compliance-header-right">
+                      <span class="compliance-status-badge" [class]="getStatusClass(req.status)">
+                        {{ getStatusLabel(req.status) }}
+                      </span>
+                      <svg class="expand-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M4 6L8 10L12 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </div>
+                  </div>
+                  
+                  <!-- Expanded Content -->
+                  <div class="compliance-content" *ngIf="isComplianceExpanded(req.id)">
+                    <div class="compliance-form-grid">
+                      <!-- Status -->
+                      <div class="form-field">
+                        <label>Status</label>
+                        <select 
+                          [value]="req.status" 
+                          (change)="updateComplianceField(req.id, 'status', $any($event.target).value)">
+                          <option value="not_started">Not started</option>
+                          <option value="in_progress">In progress</option>
+                          <option value="complete">Complete</option>
+                        </select>
+                      </div>
+                      
+                      <!-- Owner -->
+                      <div class="form-field">
+                        <label>Owner</label>
+                        <input 
+                          type="text" 
+                          [ngModel]="req.owner"
+                          (ngModelChange)="updateComplianceField(req.id, 'owner', $event)"
+                          [ngModelOptions]="{standalone: true, updateOn: 'blur'}"
+                          placeholder="Enter owner name or email">
+                      </div>
+                      
+                      <!-- Date Completed (only when status is complete) -->
+                      <div class="form-field" *ngIf="req.status === 'complete'">
+                        <label>Date Completed <span class="required">*</span></label>
+                        <input 
+                          type="date" 
+                          [ngModel]="req.dateCompleted"
+                          (ngModelChange)="updateComplianceField(req.id, 'dateCompleted', $event)"
+                          [ngModelOptions]="{standalone: true}">
+                      </div>
+                    </div>
+                    
+                    <!-- Evidence Upload -->
+                    <div class="form-field evidence-field">
+                      <label>Evidence</label>
+                      <div class="evidence-upload-area">
+                        <input 
+                          type="file" 
+                          [id]="'evidence-' + req.id"
+                          multiple
+                          (change)="onComplianceFileUpload(req.id, $event)"
+                          class="file-input">
+                        <label [for]="'evidence-' + req.id" class="upload-label">
+                          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path d="M8 12V4M4 8l4-4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                          </svg>
+                          Upload files
+                        </label>
+                        <span class="upload-hint">or drag and drop</span>
+                      </div>
+                      
+                      <!-- Uploaded Files List -->
+                      <div class="evidence-files" *ngIf="req.evidence.length > 0">
+                        <div class="evidence-file" *ngFor="let file of req.evidence; let i = index">
+                          <div class="file-info">
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                              <path d="M9 1H4a1 1 0 00-1 1v12a1 1 0 001 1h8a1 1 0 001-1V5L9 1z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                              <path d="M9 1v4h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span class="file-name">{{ file.name }}</span>
+                            <span class="file-size">{{ formatFileSize(file.size) }}</span>
+                          </div>
+                          <button type="button" class="remove-file" (click)="removeComplianceFile(req.id, i)" title="Remove file">
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                              <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- Notes -->
+                    <div class="form-field">
+                      <label>Notes</label>
+                      <textarea 
+                        [ngModel]="req.notes"
+                        (ngModelChange)="updateComplianceField(req.id, 'notes', $event)"
+                        [ngModelOptions]="{standalone: true, updateOn: 'blur'}"
+                        rows="2" 
+                        placeholder="Add any notes for this requirement..."></textarea>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div class="step-footer">
@@ -501,38 +601,157 @@ interface ParsedVendorInfo {
               </div>
             </div>
 
-            <!-- Step 5: Activate -->
+            <!-- Step 5: Review -->
             <div *ngIf="currentStepIndex() === 4" class="step-form">
               <div class="section-header">
-                <h2>Activate</h2>
-                <p>Review and activate vendor.</p>
+                <h2>Review</h2>
+                <p>Review all information before completing onboarding.</p>
               </div>
 
-              <div class="summary-section">
-                <div class="summary-title">Summary</div>
-                <div class="summary-grid">
-                  <div class="summary-item">
-                    <label>Company</label>
-                    <p>{{ companyForm.get('legalCompanyName')?.value || '—' }}</p>
+              <!-- Intake Section -->
+              <div class="review-section">
+                <div class="review-section-title">Intake</div>
+                <div class="review-grid">
+                  <div class="review-item" *ngIf="intakeForm.get('internalOwner')?.value">
+                    <span class="review-label">Internal Owner</span>
+                    <span class="review-value">{{ intakeForm.get('internalOwner')?.value }}</span>
                   </div>
-                  <div class="summary-item">
-                    <label>Primary Contact</label>
-                    <p>{{ companyForm.get('primaryContactName')?.value || '—' }}</p>
+                  <div class="review-item" *ngIf="intakeForm.get('businessDomain')?.value">
+                    <span class="review-label">Business Domain</span>
+                    <span class="review-value">{{ intakeForm.get('businessDomain')?.value }}</span>
                   </div>
-                  <div class="summary-item">
-                    <label>Email</label>
-                    <p>{{ companyForm.get('primaryContactEmail')?.value || '—' }}</p>
+                  <div class="review-item" *ngIf="intakeForm.get('vendorType')?.value">
+                    <span class="review-label">Vendor Type</span>
+                    <span class="review-value">{{ intakeForm.get('vendorType')?.value }}</span>
                   </div>
-                  <div class="summary-item">
-                    <label>Environment</label>
-                    <p>{{ integrationForm.get('environment')?.value || '—' }}</p>
+                  <div class="review-item" *ngIf="intakeForm.get('targetGoLiveDate')?.value">
+                    <span class="review-label">Target Go-Live Date</span>
+                    <span class="review-value">{{ intakeForm.get('targetGoLiveDate')?.value }}</span>
+                  </div>
+                  <div class="review-item full-width" *ngIf="intakeForm.get('intakeNotes')?.value">
+                    <span class="review-label">Notes</span>
+                    <span class="review-value">{{ intakeForm.get('intakeNotes')?.value }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Company Section -->
+              <div class="review-section">
+                <div class="review-section-title">Company</div>
+                <div class="review-grid">
+                  <div class="review-item" *ngIf="companyForm.get('legalCompanyName')?.value">
+                    <span class="review-label">Legal Company Name</span>
+                    <span class="review-value">{{ companyForm.get('legalCompanyName')?.value }}</span>
+                  </div>
+                  <div class="review-item" *ngIf="companyForm.get('dba')?.value">
+                    <span class="review-label">DBA</span>
+                    <span class="review-value">{{ companyForm.get('dba')?.value }}</span>
+                  </div>
+                  <div class="review-item" *ngIf="companyForm.get('primaryContactName')?.value">
+                    <span class="review-label">Primary Contact Name</span>
+                    <span class="review-value">{{ companyForm.get('primaryContactName')?.value }}</span>
+                  </div>
+                  <div class="review-item" *ngIf="companyForm.get('primaryContactEmail')?.value">
+                    <span class="review-label">Primary Contact Email</span>
+                    <span class="review-value">{{ companyForm.get('primaryContactEmail')?.value }}</span>
+                  </div>
+                  <div class="review-item" *ngIf="companyForm.get('technicalContactName')?.value">
+                    <span class="review-label">Technical Contact Name</span>
+                    <span class="review-value">{{ companyForm.get('technicalContactName')?.value }}</span>
+                  </div>
+                  <div class="review-item" *ngIf="companyForm.get('technicalContactEmail')?.value">
+                    <span class="review-label">Technical Contact Email</span>
+                    <span class="review-value">{{ companyForm.get('technicalContactEmail')?.value }}</span>
+                  </div>
+                  <div class="review-item" *ngIf="companyForm.get('supportEmail')?.value">
+                    <span class="review-label">Support Email</span>
+                    <span class="review-value">{{ companyForm.get('supportEmail')?.value }}</span>
+                  </div>
+                  <div class="review-item" *ngIf="companyForm.get('website')?.value">
+                    <span class="review-label">Website</span>
+                    <span class="review-value">{{ companyForm.get('website')?.value }}</span>
+                  </div>
+                  <div class="review-item" *ngIf="companyForm.get('country')?.value">
+                    <span class="review-label">Country/Region</span>
+                    <span class="review-value">{{ companyForm.get('country')?.value }}</span>
+                  </div>
+                  <div class="review-item full-width" *ngIf="companyForm.get('address')?.value">
+                    <span class="review-label">Address</span>
+                    <span class="review-value">{{ companyForm.get('address')?.value }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Integration Section -->
+              <div class="review-section">
+                <div class="review-section-title">Integration</div>
+                <div class="review-grid">
+                  <div class="review-item" *ngIf="integrationForm.get('environment')?.value">
+                    <span class="review-label">Environment</span>
+                    <span class="review-value">{{ integrationForm.get('environment')?.value }}</span>
+                  </div>
+                  <div class="review-item" *ngIf="integrationForm.get('authMethod')?.value">
+                    <span class="review-label">Auth Method</span>
+                    <span class="review-value">{{ integrationForm.get('authMethod')?.value }}</span>
+                  </div>
+                  <div class="review-item full-width" *ngIf="integrationForm.get('webhookUrl')?.value">
+                    <span class="review-label">Webhook URL</span>
+                    <span class="review-value url-value">{{ integrationForm.get('webhookUrl')?.value }}</span>
+                  </div>
+                  <div class="review-item full-width" *ngIf="integrationForm.get('sandboxApiUrl')?.value">
+                    <span class="review-label">Sandbox API URL</span>
+                    <span class="review-value url-value">{{ integrationForm.get('sandboxApiUrl')?.value }}</span>
+                  </div>
+                  <div class="review-item" *ngIf="integrationForm.get('webhookSecret')?.value">
+                    <span class="review-label">Webhook Secret</span>
+                    <span class="review-value">••••••••</span>
+                  </div>
+                  <div class="review-item full-width" *ngIf="integrationForm.get('integrationNotes')?.value">
+                    <span class="review-label">Notes</span>
+                    <span class="review-value">{{ integrationForm.get('integrationNotes')?.value }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Compliance Section -->
+              <div class="review-section">
+                <div class="review-section-title">Compliance</div>
+                <div class="compliance-review-list">
+                  <div *ngFor="let req of complianceRequirements()" class="compliance-review-item" [class.complete]="req.status === 'complete'">
+                    <div class="compliance-review-header">
+                      <span class="compliance-review-indicator" [class]="getStatusClass(req.status)">
+                        <svg *ngIf="req.status === 'complete'" width="10" height="10" viewBox="0 0 12 12" fill="none">
+                          <path d="M2 6L5 9L10 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                      </span>
+                      <span class="compliance-review-name">{{ req.name }}</span>
+                      <span class="compliance-review-status" [class]="getStatusClass(req.status)">{{ getStatusLabel(req.status) }}</span>
+                    </div>
+                    <div class="compliance-review-details" *ngIf="req.owner || req.dateCompleted || req.evidence.length > 0 || req.notes">
+                      <div class="review-detail" *ngIf="req.owner">
+                        <span class="detail-label">Owner:</span>
+                        <span class="detail-value">{{ req.owner }}</span>
+                      </div>
+                      <div class="review-detail" *ngIf="req.dateCompleted">
+                        <span class="detail-label">Completed:</span>
+                        <span class="detail-value">{{ req.dateCompleted }}</span>
+                      </div>
+                      <div class="review-detail" *ngIf="req.evidence.length > 0">
+                        <span class="detail-label">Evidence:</span>
+                        <span class="detail-value">{{ req.evidence.length }} file{{ req.evidence.length > 1 ? 's' : '' }} uploaded</span>
+                      </div>
+                      <div class="review-detail full-width" *ngIf="req.notes">
+                        <span class="detail-label">Notes:</span>
+                        <span class="detail-value">{{ req.notes }}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
 
               <div class="form-divider"></div>
 
-              <p class="info-text">After activation:</p>
+              <p class="info-text">After onboard completion:</p>
               <ul class="info-list">
                 <li>Vendor record will be created</li>
                 <li>Sandbox validation will run</li>
@@ -551,8 +770,8 @@ interface ParsedVendorInfo {
           </div>
           </div>
 
-          <!-- Right: Summary Sidebar -->
-          <aside class="summary-sidebar">
+          <!-- Right: Summary Sidebar (hidden on Review step) -->
+          <aside class="summary-sidebar" [class.hidden-on-review]="currentStepIndex() === 4">
             <div class="sidebar-header">
               <h3>Onboarding Summary</h3>
             </div>
@@ -664,34 +883,33 @@ interface ParsedVendorInfo {
                   <span class="section-name">Compliance</span>
                 </div>
                 <div class="section-content">
-                  <div class="summary-row" *ngIf="complianceData.securityReview">
-                    <span class="summary-label">Security</span>
-                    <span class="summary-value">Reviewed</span>
+                  <div class="summary-row" *ngFor="let req of complianceRequirements()">
+                    <span class="summary-label compliance-summary-label" [class]="getStatusClass(req.status)">
+                      <svg *ngIf="req.status === 'complete'" width="10" height="10" viewBox="0 0 12 12" fill="none" class="check-icon">
+                        <path d="M2 6L5 9L10 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                      {{ req.name.length > 20 ? req.name.substring(0, 18) + '...' : req.name }}
+                    </span>
+                    <span class="summary-value compliance-status-mini" [class]="getStatusClass(req.status)">
+                      {{ req.status === 'complete' ? '✓' : req.status === 'in_progress' ? '...' : '—' }}
+                    </span>
                   </div>
-                  <div class="summary-row" *ngIf="complianceData.dataAgreementSigned">
-                    <span class="summary-label">DPA</span>
-                    <span class="summary-value">Signed</span>
-                  </div>
-                  <div class="summary-row" *ngIf="complianceData.complianceOwner">
-                    <span class="summary-label">Owner</span>
-                    <span class="summary-value">{{ complianceData.complianceOwner }}</span>
-                  </div>
-                  <div class="summary-row">
-                    <span class="summary-label">Checks</span>
-                    <span class="summary-value">{{ getComplianceCount() }} of 4</span>
+                  <div class="summary-row compliance-total">
+                    <span class="summary-label">Progress</span>
+                    <span class="summary-value">{{ getComplianceCount() }} of {{ complianceRequirements().length }}</span>
                   </div>
                 </div>
               </div>
 
-              <!-- Activate Section -->
+              <!-- Review Section -->
               <div class="sidebar-section">
                 <div class="section-header-row">
-                  <span class="section-status" [class.complete]="getSectionStatus('activate') === 'Complete'" [class.in-progress]="getSectionStatus('activate') === 'In progress'">
-                    <svg *ngIf="getSectionStatus('activate') === 'Complete'" width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <span class="section-status" [class.complete]="getSectionStatus('review') === 'Complete'" [class.in-progress]="getSectionStatus('review') === 'In progress'">
+                    <svg *ngIf="getSectionStatus('review') === 'Complete'" width="12" height="12" viewBox="0 0 12 12" fill="none">
                       <path d="M2 6L5 9L10 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                   </span>
-                  <span class="section-name">Activate</span>
+                  <span class="section-name">Review</span>
                 </div>
                 <div class="section-content">
                   <div class="summary-empty">—</div>
@@ -736,15 +954,14 @@ export class VendorOnboardingPage implements OnInit, OnDestroy, AfterViewInit {
         if (this.integrationForm.dirty || Object.values(this.integrationForm.value).some(v => v)) return 'In progress';
         return 'Not started';
       case 'compliance':
-        const complianceComplete = this.complianceData.securityReview && 
-          this.complianceData.documentationReceived && 
-          this.complianceData.dataAgreementSigned && 
-          this.complianceData.apimPoliciesApplied;
-        if (complianceComplete) return 'Complete';
-        if (this.getComplianceCount() > 0) return 'In progress';
+        const reqs = this.complianceRequirements();
+        const allComplete = reqs.every(r => r.status === 'complete');
+        const anyStarted = reqs.some(r => r.status !== 'not_started');
+        if (allComplete) return 'Complete';
+        if (anyStarted) return 'In progress';
         return 'Not started';
-      case 'activate':
-        // Activate is complete when everything else is complete and they're on the last step
+      case 'review':
+        // Review is complete when everything else is complete and they're on the last step
         if (this.currentStepIndex() === 4 && this.canComplete()) return 'Complete';
         if (this.currentStepIndex() === 4) return 'In progress';
         return 'Not started';
@@ -754,19 +971,40 @@ export class VendorOnboardingPage implements OnInit, OnDestroy, AfterViewInit {
   }
 
   getComplianceCount(): number {
-    let count = 0;
-    if (this.complianceData.securityReview) count++;
-    if (this.complianceData.documentationReceived) count++;
-    if (this.complianceData.dataAgreementSigned) count++;
-    if (this.complianceData.apimPoliciesApplied) count++;
-    return count;
+    return this.complianceRequirements().filter(r => r.status === 'complete').length;
   }
 
   canComplete(): boolean {
+    // Compliance items are optional for onboarding completion
+    // Activation gating is handled separately on the Vendor Details page
     return this.intakeForm.valid && 
            this.companyForm.valid && 
-           this.integrationForm.valid &&
-           this.getComplianceCount() === 4;
+           this.integrationForm.valid;
+  }
+
+  // Helper methods for Review step - check if section has any filled data
+  hasIntakeData(): boolean {
+    const values = this.intakeForm.value;
+    return Object.values(values).some(v => v !== null && v !== undefined && v !== '');
+  }
+
+  hasCompanyData(): boolean {
+    const values = this.companyForm.value;
+    return Object.values(values).some(v => v !== null && v !== undefined && v !== '');
+  }
+
+  hasIntegrationData(): boolean {
+    const values = this.integrationForm.value;
+    return Object.values(values).some(v => v !== null && v !== undefined && v !== '');
+  }
+
+  hasComplianceData(): boolean {
+    return this.complianceRequirements().some(r => 
+      r.status !== 'not_started' || 
+      r.owner !== '' || 
+      r.evidence.length > 0 || 
+      r.notes !== ''
+    );
   }
 
   // Assisted Intake state
@@ -967,15 +1205,158 @@ export class VendorOnboardingPage implements OnInit, OnDestroy, AfterViewInit {
     this.animateExitAndNavigate('/vendors/companies');
   }
 
-  complianceData = {
-    securityReview: false,
-    documentationReceived: false,
-    dataAgreementSigned: false,
-    apimPoliciesApplied: false,
-    complianceOwner: '',
-    dateCompleted: '',
-    notes: ''
-  };
+  // Compliance requirements - each is an independent workstream
+  complianceRequirements = signal<ComplianceRequirement[]>([
+    {
+      id: 'security-review',
+      name: 'Security review',
+      status: 'not_started',
+      owner: '',
+      evidence: [],
+      dateCompleted: '',
+      notes: ''
+    },
+    {
+      id: 'documentation',
+      name: 'Required documentation received',
+      status: 'not_started',
+      owner: '',
+      evidence: [],
+      dateCompleted: '',
+      notes: ''
+    },
+    {
+      id: 'data-agreement',
+      name: 'Data processing agreement signed',
+      status: 'not_started',
+      owner: '',
+      evidence: [],
+      dateCompleted: '',
+      notes: ''
+    },
+    {
+      id: 'apim-policies',
+      name: 'APIM policies applied',
+      status: 'not_started',
+      owner: '',
+      evidence: [],
+      dateCompleted: '',
+      notes: ''
+    }
+  ]);
+
+  // Track which compliance items are expanded
+  expandedComplianceIds = signal<Set<string>>(new Set());
+
+  // Toggle compliance item expansion
+  toggleComplianceExpand(id: string) {
+    const current = this.expandedComplianceIds();
+    const updated = new Set(current);
+    if (updated.has(id)) {
+      updated.delete(id);
+    } else {
+      updated.add(id);
+    }
+    this.expandedComplianceIds.set(updated);
+  }
+
+  isComplianceExpanded(id: string): boolean {
+    return this.expandedComplianceIds().has(id);
+  }
+
+  // Update a compliance requirement field
+  updateComplianceField(id: string, field: keyof ComplianceRequirement, value: any) {
+    const requirements = this.complianceRequirements();
+    const updated = requirements.map(req => {
+      if (req.id === id) {
+        const updatedReq = { ...req, [field]: value };
+        // Auto-set date completed when status changes to complete
+        if (field === 'status' && value === 'complete' && !updatedReq.dateCompleted) {
+          updatedReq.dateCompleted = new Date().toISOString().split('T')[0];
+        }
+        // Clear date completed if status is not complete
+        if (field === 'status' && value !== 'complete') {
+          updatedReq.dateCompleted = '';
+        }
+        return updatedReq;
+      }
+      return req;
+    });
+    this.complianceRequirements.set(updated);
+    this.onComplianceChange();
+  }
+
+  // Handle file upload for a compliance requirement
+  onComplianceFileUpload(id: string, event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (!input.files) return;
+    
+    const requirements = this.complianceRequirements();
+    const updated = requirements.map(req => {
+      if (req.id === id) {
+        const newFiles = Array.from(input.files || []).map(file => ({
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          uploadedAt: new Date().toISOString()
+        }));
+        return { ...req, evidence: [...req.evidence, ...newFiles] };
+      }
+      return req;
+    });
+    this.complianceRequirements.set(updated);
+    input.value = ''; // Reset input for re-uploads
+  }
+
+  // Remove a file from a compliance requirement
+  removeComplianceFile(id: string, fileIndex: number) {
+    const requirements = this.complianceRequirements();
+    const updated = requirements.map(req => {
+      if (req.id === id) {
+        const evidence = [...req.evidence];
+        evidence.splice(fileIndex, 1);
+        return { ...req, evidence };
+      }
+      return req;
+    });
+    this.complianceRequirements.set(updated);
+  }
+
+  // Get status label for display
+  getStatusLabel(status: ComplianceStatus): string {
+    switch (status) {
+      case 'not_started': return 'Not started';
+      case 'in_progress': return 'In progress';
+      case 'complete': return 'Complete';
+      default: return 'Not started';
+    }
+  }
+
+  // Get status class for styling
+  getStatusClass(status: ComplianceStatus): string {
+    return status.replace('_', '-');
+  }
+
+  // Format file size
+  formatFileSize(bytes: number): string {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  // Legacy complianceData getter for backward compatibility
+  get complianceData() {
+    const reqs = this.complianceRequirements();
+    return {
+      securityReview: reqs.find(r => r.id === 'security-review')?.status === 'complete',
+      documentationReceived: reqs.find(r => r.id === 'documentation')?.status === 'complete',
+      dataAgreementSigned: reqs.find(r => r.id === 'data-agreement')?.status === 'complete',
+      apimPoliciesApplied: reqs.find(r => r.id === 'apim-policies')?.status === 'complete',
+      complianceOwner: reqs[0]?.owner || '',
+      dateCompleted: reqs.find(r => r.status === 'complete')?.dateCompleted || '',
+      notes: reqs.map(r => r.notes).filter(n => n).join('; ')
+    };
+  }
 
   steps = signal<OnboardingStep[]>([
     {
@@ -1003,9 +1384,9 @@ export class VendorOnboardingPage implements OnInit, OnDestroy, AfterViewInit {
       completed: false
     },
     {
-      id: 'activate',
-      label: 'Activate',
-      description: 'Review and activate',
+      id: 'review',
+      label: 'Review',
+      description: 'Final review',
       completed: false
     }
   ]);
@@ -1072,13 +1453,6 @@ export class VendorOnboardingPage implements OnInit, OnDestroy, AfterViewInit {
   }
 
   onComplianceChange() {
-    if (this.complianceData.securityReview &&
-        this.complianceData.documentationReceived &&
-        this.complianceData.dataAgreementSigned &&
-        this.complianceData.apimPoliciesApplied &&
-        !this.complianceData.dateCompleted) {
-      this.complianceData.dateCompleted = new Date().toISOString().split('T')[0];
-    }
     if (this.validationErrorMessage() && this.currentStepIndex() === 3) {
       this.validationErrorMessage.set('');
     }
@@ -1163,14 +1537,8 @@ export class VendorOnboardingPage implements OnInit, OnDestroy, AfterViewInit {
     }
     
     if (index === 3) {
-      const missingItems: string[] = [];
-      if (!this.complianceData.securityReview) missingItems.push('Security Review');
-      if (!this.complianceData.documentationReceived) missingItems.push('Documentation Received');
-      if (!this.complianceData.dataAgreementSigned) missingItems.push('Data Agreement Signed');
-      if (!this.complianceData.apimPoliciesApplied) missingItems.push('APIM Policies Applied');
-      return missingItems.length > 0 
-        ? `Please complete the following compliance items: ${missingItems.join(', ')}` 
-        : '';
+      // Compliance items are optional during onboarding - activation gating is separate
+      return '';
     }
     
     return '';
@@ -1207,10 +1575,9 @@ export class VendorOnboardingPage implements OnInit, OnDestroy, AfterViewInit {
       return this.integrationForm.valid;
     }
     if (index === 3) {
-      return this.complianceData.securityReview &&
-             this.complianceData.documentationReceived &&
-             this.complianceData.dataAgreementSigned &&
-             this.complianceData.apimPoliciesApplied;
+      // Compliance items are optional during onboarding - always allow proceeding
+      // Activation gating happens separately after onboarding
+      return true;
     }
     if (index === 4) {
       return true;
@@ -1244,11 +1611,9 @@ export class VendorOnboardingPage implements OnInit, OnDestroy, AfterViewInit {
         return;
       }
     } else if (index === 3) {
-      if (!this.canProceed()) {
-        this.validationErrorMessage.set(this.getValidationMessage());
-        this.logger.warn('Cannot proceed: compliance items not completed');
-        return;
-      }
+      // Compliance is optional - no blocking validation
+      // Clear any previous error messages
+      this.validationErrorMessage.set('');
     }
     
     this.validationErrorMessage.set('');
@@ -1308,19 +1673,11 @@ export class VendorOnboardingPage implements OnInit, OnDestroy, AfterViewInit {
     currentSteps.forEach(s => s.completed = true);
     this.steps.set([...currentSteps]);
 
-    if (this.complianceData.securityReview &&
-        this.complianceData.documentationReceived &&
-        this.complianceData.dataAgreementSigned &&
-        this.complianceData.apimPoliciesApplied &&
-        !this.complianceData.dateCompleted) {
-      this.complianceData.dateCompleted = new Date().toISOString().split('T')[0];
-    }
-
     const onboardingData = {
       intake: this.intakeForm.value,
       company: this.companyForm.value,
       integration: this.integrationForm.value,
-      compliance: this.complianceData
+      complianceRequirements: this.complianceRequirements()
     };
 
     this.logger.info('Onboarding completed', { data: onboardingData });
@@ -1367,7 +1724,7 @@ export class VendorOnboardingPage implements OnInit, OnDestroy, AfterViewInit {
     return this.intakeForm.dirty ||
            this.companyForm.dirty ||
            this.integrationForm.dirty ||
-           Object.values(this.complianceData).some(v => v !== false && v !== '');
+           this.hasComplianceData();
   }
 
   private saveDraft() {
@@ -1376,7 +1733,7 @@ export class VendorOnboardingPage implements OnInit, OnDestroy, AfterViewInit {
       intake: this.intakeForm.value,
       company: this.companyForm.value,
       integration: this.integrationForm.value,
-      compliance: this.complianceData,
+      complianceRequirements: this.complianceRequirements(),
       steps: this.steps()
     };
     try {
@@ -1402,11 +1759,24 @@ export class VendorOnboardingPage implements OnInit, OnDestroy, AfterViewInit {
         if (draft.integration) {
           this.integrationForm.patchValue(draft.integration);
         }
-        if (draft.compliance) {
-          this.complianceData = { ...this.complianceData, ...draft.compliance };
+        if (draft.complianceRequirements && Array.isArray(draft.complianceRequirements)) {
+          // Restore compliance requirements, merging with current structure
+          const currentReqs = this.complianceRequirements();
+          const restoredReqs = currentReqs.map(req => {
+            const savedReq = draft.complianceRequirements.find((s: any) => s.id === req.id);
+            return savedReq ? { ...req, ...savedReq } : req;
+          });
+          this.complianceRequirements.set(restoredReqs);
         }
-        if (draft.steps) {
-          this.steps.set(draft.steps);
+        if (draft.steps && Array.isArray(draft.steps)) {
+          // Only restore the 'completed' status, keep current step definitions (id, label, description)
+          const currentSteps = this.steps();
+          draft.steps.forEach((savedStep: { id?: string; completed?: boolean }, index: number) => {
+            if (index < currentSteps.length && typeof savedStep.completed === 'boolean') {
+              currentSteps[index].completed = savedStep.completed;
+            }
+          });
+          this.steps.set([...currentSteps]);
         }
       }
     } catch (e) {

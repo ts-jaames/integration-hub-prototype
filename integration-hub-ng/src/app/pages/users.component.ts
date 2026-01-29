@@ -15,6 +15,7 @@ import {
 } from 'carbon-components-angular';
 import { User, UserStatus, UserRole, InviteUserPayload } from '../shared/models/user.model';
 import { UsersService } from '../shared/services/users.service';
+import { RoleService } from '../core/role.service';
 import { DataTableComponent } from '../shared/components/data-table/data-table.component';
 import { TextInputComponent } from '../shared/components/primitives/text-input/text-input.component';
 import { SelectComponent, SelectOption } from '../shared/components/primitives/select/select.component';
@@ -32,10 +33,41 @@ import { LoggerService } from '../core/services/logger.service';
       <div class="page-header">
         <div>
           <h1>Users</h1>
-          <p class="page-subtitle">Manage user accounts and role assignments</p>
+          <p class="page-subtitle">
+            {{ isSysAdmin() ? 'Manage user accounts across all companies' : 'Manage user accounts for ' + currentCompanyName() }}
+          </p>
         </div>
         <div class="header-actions">
-          <button ibmButton="primary" (click)="openInviteDrawer()" type="button">Invite User</button>
+          <!-- Read-only indicator -->
+          <div class="readonly-badge" *ngIf="isReadOnly()" title="You don't have permission to perform this action.">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+              <path d="M12 6H4a2 2 0 00-2 2v4a2 2 0 002 2h8a2 2 0 002-2V8a2 2 0 00-2-2z" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M5 6V4a3 3 0 016 0v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            Read-only
+          </div>
+          
+          <button 
+            class="btn-secondary" 
+            (click)="openBulkUploadModal()" 
+            type="button"
+            *ngIf="canInviteUsers()"
+            [disabled]="isReadOnly()"
+            [title]="isReadOnly() ? 'You don\\'t have permission to perform this action.' : 'Upload users via CSV'">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="margin-right: 0.5rem">
+              <path d="M8 1v10M4 5l4-4 4 4M2 14h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Bulk Upload
+          </button>
+          <button 
+            ibmButton="primary" 
+            (click)="openInviteDrawer()" 
+            type="button"
+            *ngIf="canInviteUsers()"
+            [disabled]="isReadOnly()"
+            [title]="isReadOnly() ? 'You don\\'t have permission to perform this action.' : 'Invite a new user'">
+            Invite User
+          </button>
         </div>
       </div>
 
@@ -45,7 +77,7 @@ import { LoggerService } from '../core/services/logger.service';
             <div class="toolbar-search">
               <app-text-input
                 label="Search"
-                placeholder="Search by name or email…"
+                [placeholder]="isSysAdmin() ? 'Search by name, email, or company…' : 'Search by name or email…'"
                 [ngModel]="searchQuery()"
                 (ngModelChange)="searchQuery.set($event); onSearchChange()"
                 (escape)="clearSearch()"
@@ -62,7 +94,9 @@ import { LoggerService } from '../core/services/logger.service';
                 ariaLabel="Filter by status">
               </app-select>
               
+              <!-- Company filter: ONLY for Sys Admin -->
               <app-select
+                *ngIf="isSysAdmin()"
                 label="Company"
                 [options]="companySelectOptions()"
                 [ngModel]="selectedCompany()"
@@ -83,7 +117,7 @@ import { LoggerService } from '../core/services/logger.service';
               <div class="toolbar-sort">
                 <app-select
                   label="Sort by"
-                  [options]="sortSelectOptions"
+                  [options]="sortSelectOptions()"
                   [ngModel]="sortBy()"
                   (ngModelChange)="sortBy.set($event); onSearchChange()"
                   ariaLabel="Sort results">
@@ -119,7 +153,7 @@ import { LoggerService } from '../core/services/logger.service';
               (remove)="clearStatus()">
             </app-filter-chip>
             <app-filter-chip
-              *ngIf="selectedCompany()"
+              *ngIf="selectedCompany() && isSysAdmin()"
               label="Company"
               [value]="getCompanyName(selectedCompany()!)"
               (remove)="clearCompany()">
@@ -196,9 +230,11 @@ import { LoggerService } from '../core/services/logger.service';
               placeholder="Doe">
           </ibm-label>
 
+          <!-- Company: selectable for Sys Admin, locked for Vendor Admin -->
           <ibm-label>
             Company <span class="required">*</span>
             <select
+              *ngIf="isSysAdmin()"
               ibmSelect
               formControlName="companyId"
               required>
@@ -207,7 +243,13 @@ import { LoggerService } from '../core/services/logger.service';
                 {{ company.name }}
               </option>
             </select>
-            <span class="bx--form__requirement" *ngIf="inviteForm.get('companyId')?.hasError('required') && inviteForm.get('companyId')?.touched">
+            <input
+              *ngIf="!isSysAdmin()"
+              ibmText
+              [value]="currentCompanyName()"
+              readonly
+              disabled>
+            <span class="bx--form__requirement" *ngIf="isSysAdmin() && inviteForm.get('companyId')?.hasError('required') && inviteForm.get('companyId')?.touched">
               Company is required
             </span>
           </ibm-label>
@@ -219,7 +261,7 @@ import { LoggerService } from '../core/services/logger.service';
               formControlName="roles"
               required>
               <option value="">Select role</option>
-              <option *ngFor="let role of roleOptions" [value]="role">
+              <option *ngFor="let role of availableRoleOptions()" [value]="role">
                 {{ role }}
               </option>
             </select>
@@ -250,6 +292,75 @@ import { LoggerService } from '../core/services/logger.service';
       </ibm-modal-footer>
     </ibm-modal>
 
+    <!-- Bulk Upload Modal -->
+    <ibm-modal
+      [open]="bulkUploadModalOpen()"
+      [size]="'md'"
+      (overlaySelected)="closeBulkUploadModal()">
+      <ibm-modal-header (closeSelect)="closeBulkUploadModal()">
+        <p class="bx--modal-header__heading">Bulk Upload Users</p>
+      </ibm-modal-header>
+      <div ibmModalContent>
+        <p class="bulk-description">
+          Upload a CSV file to invite multiple users at once.
+        </p>
+        
+        <div class="template-section">
+          <p class="template-label">Download template:</p>
+          <button class="btn-link" (click)="downloadCSVTemplate()">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="margin-right: 0.5rem">
+              <path d="M8 1v10M4 7l4 4 4-4M2 14h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            {{ isSysAdmin() ? 'users_template_sysadmin.csv' : 'users_template.csv' }}
+          </button>
+          <p class="template-hint">
+            {{ isSysAdmin() ? 'Template includes: email, firstName, lastName, companyId, role' : 'Template includes: email, firstName, lastName, role' }}
+          </p>
+        </div>
+
+        <div class="upload-section">
+          <label class="file-upload-label">
+            <input 
+              type="file" 
+              accept=".csv" 
+              (change)="onFileSelected($event)"
+              class="file-input">
+            <span class="file-upload-btn">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="margin-right: 0.5rem">
+                <path d="M8 1v10M4 5l4-4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Choose CSV file
+            </span>
+          </label>
+          <span class="selected-file" *ngIf="selectedFile()">
+            {{ selectedFile()!.name }}
+          </span>
+        </div>
+
+        <div class="upload-preview" *ngIf="bulkUploadPreview().length > 0">
+          <p class="preview-label">Preview ({{ bulkUploadPreview().length }} users):</p>
+          <div class="preview-list">
+            <div *ngFor="let user of bulkUploadPreview().slice(0, 5)" class="preview-item">
+              <span class="preview-email">{{ user.email }}</span>
+              <span class="preview-role">{{ user.role }}</span>
+            </div>
+            <div *ngIf="bulkUploadPreview().length > 5" class="preview-more">
+              +{{ bulkUploadPreview().length - 5 }} more...
+            </div>
+          </div>
+        </div>
+      </div>
+      <ibm-modal-footer>
+        <button ibmButton="secondary" (click)="closeBulkUploadModal()">Cancel</button>
+        <button
+          ibmButton="primary"
+          [disabled]="!selectedFile() || bulkUploading()"
+          (click)="onBulkUpload()">
+          {{ bulkUploading() ? 'Uploading...' : 'Upload & Send Invites' }}
+        </button>
+      </ibm-modal-footer>
+    </ibm-modal>
+
     <!-- User Details Drawer -->
     <app-user-details-drawer
       [user]="selectedUser()"
@@ -265,43 +376,80 @@ import { LoggerService } from '../core/services/logger.service';
     <!-- Actions Menu (kebab menu) -->
     <div class="actions-menu" *ngIf="actionsMenuOpen() && selectedUser()" [style.top.px]="actionsMenuPosition().top" [style.left.px]="actionsMenuPosition().left">
       <button class="menu-item" (click)="copyEmail()">Copy email</button>
-      <button class="menu-item" *ngIf="selectedUser()!.status === 'Invited'" (click)="resendInvite()">Resend invite</button>
+      <button 
+        class="menu-item" 
+        (click)="editRoles()"
+        [disabled]="isReadOnly()"
+        [title]="isReadOnly() ? 'You don\\'t have permission to perform this action.' : ''">
+        Edit roles
+      </button>
+      <button 
+        class="menu-item" 
+        *ngIf="selectedUser()!.status === 'Invited'" 
+        (click)="resendInvite()"
+        [disabled]="isReadOnly()"
+        [title]="isReadOnly() ? 'You don\\'t have permission to perform this action.' : ''">
+        Resend invite
+      </button>
       <button 
         class="menu-item" 
         *ngIf="selectedUser()!.status === 'Active'" 
-        (click)="deactivateUser()"
-        [disabled]="isLastSystemAdmin(selectedUser()!)">
-        Deactivate
+        (click)="suspendUser()"
+        [disabled]="isReadOnly()"
+        [title]="isReadOnly() ? 'You don\\'t have permission to perform this action.' : ''">
+        Suspend
       </button>
       <button 
         class="menu-item" 
-        *ngIf="selectedUser()!.status === 'Deactivated' || selectedUser()!.status === 'Suspended'" 
-        (click)="reactivateUser()">
-        Reactivate
+        *ngIf="selectedUser()!.status === 'Suspended'" 
+        (click)="unsuspendUser()"
+        [disabled]="isReadOnly()"
+        [title]="isReadOnly() ? 'You don\\'t have permission to perform this action.' : ''">
+        Unsuspend
       </button>
-      <div class="menu-helper" *ngIf="selectedUser()!.status === 'Active' && isLastSystemAdmin(selectedUser()!)">
-        Cannot deactivate the last System Admin
+      <button 
+        class="menu-item danger" 
+        (click)="removeAccess()"
+        [disabled]="isLastSystemAdmin(selectedUser()!) || isReadOnly()"
+        [title]="isReadOnly() ? 'You don\\'t have permission to perform this action.' : ''">
+        Remove access
+      </button>
+      <div class="menu-helper" *ngIf="isReadOnly()">
+        You don't have permission to perform this action.
+      </div>
+      <div class="menu-helper" *ngIf="!isReadOnly() && isLastSystemAdmin(selectedUser()!)">
+        Cannot remove the last System Admin
       </div>
     </div>
 
     <!-- Confirm Dialogs -->
     <app-confirm-dialog
-      [open]="deactivateConfirmOpen()"
-      title="Deactivate User"
-      [message]="'Deactivate this user? They will lose access immediately.'"
-      confirmLabel="Deactivate"
+      [open]="removeAccessConfirmOpen()"
+      title="Remove Access"
+      [message]="'Remove access for this user? They will lose all access immediately.'"
+      confirmLabel="Remove Access"
       [danger]="true"
-      (confirmed)="confirmDeactivate()"
-      (cancelled)="cancelDeactivate()">
+      (confirmed)="confirmRemoveAccess()"
+      (cancelled)="cancelRemoveAccess()">
     </app-confirm-dialog>
 
     <app-confirm-dialog
-      [open]="reactivateConfirmOpen()"
-      title="Reactivate User"
-      [message]="'Reactivate this user?'"
-      confirmLabel="Reactivate"
-      (confirmed)="confirmReactivate()"
-      (cancelled)="cancelReactivate()">
+      [open]="suspendConfirmOpen()"
+      title="Suspend User"
+      [message]="'Suspend this user? They will temporarily lose access.'"
+      confirmLabel="Suspend"
+      [danger]="true"
+      (confirmed)="confirmSuspend()"
+      (cancelled)="cancelSuspend()">
+    </app-confirm-dialog>
+
+    <app-confirm-dialog
+      [open]="unsuspendConfirmOpen()"
+      title="Unsuspend User"
+      [message]="'Unsuspend this user? They will regain access.'"
+      confirmLabel="Unsuspend"
+      (confirmed)="confirmUnsuspend()"
+      (cancelled)="cancelUnsuspend()">
     </app-confirm-dialog>
   `,
   styles: [`
@@ -335,6 +483,40 @@ import { LoggerService } from '../core/services/logger.service';
       display: flex;
       gap: 0.75rem;
       align-items: center;
+    }
+
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.5rem 1rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--linear-text-primary);
+      background: var(--linear-surface);
+      border: 1px solid var(--linear-border);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .btn-link {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.5rem 0;
+      background: none;
+      border: none;
+      color: var(--linear-accent);
+      font-size: 0.875rem;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .btn-link:hover {
+      text-decoration: underline;
     }
 
     .toolbar-container {
@@ -467,7 +649,6 @@ import { LoggerService } from '../core/services/logger.service';
         background: rgba(255, 255, 255, 0.05) !important;
       }
 
-      /* Actions column should not trigger row click */
       .bx--data-table tbody tr td:last-child,
       .cds--data-table tbody tr td:last-child {
         cursor: default;
@@ -505,44 +686,120 @@ import { LoggerService } from '../core/services/logger.service';
       color: #da1e28;
     }
 
-    .user-details {
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
-    }
-
-    .detail-item {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-
-    .detail-item label {
-      font-size: 0.75rem;
-      font-weight: 500;
+    /* Bulk Upload Modal */
+    .bulk-description {
+      font-size: 0.875rem;
       color: var(--linear-text-secondary);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+      margin: 0 0 1.5rem 0;
     }
 
-    .detail-item p {
+    .template-section {
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+      background: var(--linear-surface);
+      border: 1px solid var(--linear-border);
+      border-radius: 6px;
+    }
+
+    .template-label {
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: var(--linear-text-primary);
+      margin: 0 0 0.5rem 0;
+    }
+
+    .template-hint {
+      font-size: 0.75rem;
+      color: var(--linear-text-secondary);
+      margin: 0.5rem 0 0 0;
+    }
+
+    .upload-section {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .file-input {
+      display: none;
+    }
+
+    .file-upload-label {
+      cursor: pointer;
+    }
+
+    .file-upload-btn {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.5rem 1rem;
       font-size: 0.875rem;
       color: var(--linear-text-primary);
-      margin: 0;
+      background: var(--linear-surface);
+      border: 1px dashed var(--linear-border);
+      border-radius: 6px;
+      transition: border-color 0.15s;
     }
 
-    .roles-list {
+    .file-upload-label:hover .file-upload-btn {
+      border-color: var(--linear-accent);
+    }
+
+    .selected-file {
+      font-size: 0.875rem;
+      color: var(--linear-text-secondary);
+    }
+
+    .upload-preview {
+      padding: 1rem;
+      background: var(--linear-surface);
+      border: 1px solid var(--linear-border);
+      border-radius: 6px;
+    }
+
+    .preview-label {
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: var(--linear-text-primary);
+      margin: 0 0 0.75rem 0;
+    }
+
+    .preview-list {
       display: flex;
-      flex-wrap: wrap;
+      flex-direction: column;
       gap: 0.5rem;
     }
 
-    .helper-text {
-      font-size: 0.75rem;
-      color: var(--linear-text-secondary);
-      margin-top: 0.25rem;
+    .preview-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.375rem 0;
+      border-bottom: 1px solid var(--linear-border);
     }
 
+    .preview-item:last-child {
+      border-bottom: none;
+    }
+
+    .preview-email {
+      font-size: 0.8125rem;
+      color: var(--linear-text-primary);
+    }
+
+    .preview-role {
+      font-size: 0.75rem;
+      color: var(--linear-text-secondary);
+    }
+
+    .preview-more {
+      font-size: 0.75rem;
+      color: var(--linear-text-secondary);
+      font-style: italic;
+      padding: 0.375rem 0;
+    }
+
+    /* Actions Menu */
     .actions-menu {
       position: fixed;
       background: var(--linear-surface);
@@ -571,12 +828,20 @@ import { LoggerService } from '../core/services/logger.service';
       background: rgba(0, 0, 0, 0.05);
     }
 
+    .menu-item.danger {
+      color: #ef4444;
+    }
+
+    .menu-item.danger:hover {
+      background: rgba(239, 68, 68, 0.1);
+    }
+
     .menu-item:first-child {
       border-top-left-radius: 4px;
       border-top-right-radius: 4px;
     }
 
-    .menu-item:last-child {
+    .menu-item:last-of-type {
       border-bottom-left-radius: 4px;
       border-bottom-right-radius: 4px;
     }
@@ -593,12 +858,44 @@ import { LoggerService } from '../core/services/logger.service';
       border-top: 1px solid var(--linear-border);
       margin-top: 0.25rem;
     }
+
+    /* Read-only badge */
+    .readonly-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      padding: 0.375rem 0.625rem;
+      background: var(--linear-surface);
+      border: 1px solid var(--linear-border);
+      border-radius: 4px;
+      font-size: 0.6875rem;
+      color: var(--linear-text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Disabled button state */
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
   `]
 })
 export class UsersComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private usersService = inject(UsersService);
+  private roleService = inject(RoleService);
   private logger = inject(LoggerService);
+
+  // Scope signals
+  isSysAdmin = computed(() => this.roleService.hasGlobalScope());
+  currentCompanyId = computed(() => this.roleService.getCurrentCompanyId());
+  currentCompanyName = computed(() => this.roleService.getCurrentCompanyName() || 'Your Company');
+
+  // Permission signals
+  isReadOnly = computed(() => this.roleService.isReadOnly());
+  canInviteUsers = computed(() => this.roleService.canInviteUsers());
+  canManageUserLifecycle = computed(() => this.roleService.canManageUserLifecycle());
 
   loading = signal(false);
   users = signal<User[]>([]);
@@ -609,13 +906,18 @@ export class UsersComponent implements OnInit, OnDestroy {
   selectedRole = signal('');
   sortBy = signal('name');
   inviteDrawerOpen = signal(false);
+  bulkUploadModalOpen = signal(false);
   detailsDrawerOpen = signal(false);
   actionsMenuOpen = signal(false);
   actionsMenuPosition = signal({ top: 0, left: 0 });
   selectedUser = signal<User | null>(null);
-  deactivateConfirmOpen = signal(false);
-  reactivateConfirmOpen = signal(false);
+  removeAccessConfirmOpen = signal(false);
+  suspendConfirmOpen = signal(false);
+  unsuspendConfirmOpen = signal(false);
   inviting = signal(false);
+  bulkUploading = signal(false);
+  selectedFile = signal<File | null>(null);
+  bulkUploadPreview = signal<Array<{ email: string; role: string }>>([]);
   private isUpdatingTable = false;
   private updateTableTimeout: any = null;
 
@@ -635,14 +937,27 @@ export class UsersComponent implements OnInit, OnDestroy {
     { value: 'Read-only', label: 'Read-only' }
   ];
 
-  readonly sortSelectOptions: SelectOption[] = [
-    { value: 'name', label: 'Name (A-Z)' },
-    { value: 'name-desc', label: 'Name (Z-A)' },
-    { value: 'lastLogin', label: 'Last login (recent)' },
-    { value: 'company', label: 'Company (A-Z)' }
-  ];
+  // Sort options differ based on scope (no Company sort for Vendor Admin)
+  sortSelectOptions = computed(() => {
+    const options: SelectOption[] = [
+      { value: 'name', label: 'Name (A-Z)' },
+      { value: 'name-desc', label: 'Name (Z-A)' },
+      { value: 'lastLogin', label: 'Last login (recent)' }
+    ];
+    if (this.isSysAdmin()) {
+      options.push({ value: 'company', label: 'Company (A-Z)' });
+    }
+    return options;
+  });
 
-  readonly roleOptions: UserRole[] = ['System Admin', 'Company Manager', 'Developer', 'Read-only'];
+  // Role options for invite form differ based on scope
+  availableRoleOptions = computed(() => {
+    if (this.isSysAdmin()) {
+      return ['System Admin', 'Company Manager', 'Developer', 'Read-only'] as UserRole[];
+    }
+    // Vendor Admin can't create System Admins
+    return ['Company Manager', 'Developer', 'Read-only'] as UserRole[];
+  });
 
   companySelectOptions = computed(() => {
     const options: SelectOption[] = [{ value: '', label: 'All' }];
@@ -661,16 +976,28 @@ export class UsersComponent implements OnInit, OnDestroy {
     const selectedCompany = this.selectedCompany();
     const selectedRole = this.selectedRole();
     const sortBy = this.sortBy();
+    const companyId = this.currentCompanyId();
 
-    // Search by name or email
+    // For Vendor Admin, always filter by their company
+    if (!this.isSysAdmin() && companyId) {
+      filtered = filtered.filter(u => u.companyId === companyId);
+    }
+
+    // Search by name, email (+ company for sys admin)
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(u =>
-        u.email.toLowerCase().includes(query) ||
-        (u.firstName && u.firstName.toLowerCase().includes(query)) ||
-        (u.lastName && u.lastName.toLowerCase().includes(query)) ||
-        `${u.firstName || ''} ${u.lastName || ''}`.toLowerCase().includes(query)
-      );
+      filtered = filtered.filter(u => {
+        const nameMatch = u.email.toLowerCase().includes(query) ||
+          (u.firstName && u.firstName.toLowerCase().includes(query)) ||
+          (u.lastName && u.lastName.toLowerCase().includes(query)) ||
+          `${u.firstName || ''} ${u.lastName || ''}`.toLowerCase().includes(query);
+        
+        // Sys Admin can also search by company
+        if (this.isSysAdmin()) {
+          return nameMatch || u.companyName.toLowerCase().includes(query);
+        }
+        return nameMatch;
+      });
     }
 
     // Filter by status
@@ -678,8 +1005,8 @@ export class UsersComponent implements OnInit, OnDestroy {
       filtered = filtered.filter(u => u.status === selectedStatus);
     }
 
-    // Filter by company
-    if (selectedCompany) {
+    // Filter by company (Sys Admin only)
+    if (selectedCompany && this.isSysAdmin()) {
       filtered = filtered.filter(u => u.companyId === selectedCompany);
     }
 
@@ -717,7 +1044,7 @@ export class UsersComponent implements OnInit, OnDestroy {
     return !!(
       this.searchQuery() ||
       this.selectedStatus() ||
-      this.selectedCompany() ||
+      (this.selectedCompany() && this.isSysAdmin()) ||
       this.selectedRole()
     );
   });
@@ -753,7 +1080,6 @@ export class UsersComponent implements OnInit, OnDestroy {
   handleDocumentClick(event: MouseEvent) {
     if (this.actionsMenuOpen()) {
       const target = event.target as HTMLElement;
-      // Close menu if clicking outside of it
       if (!target.closest('.actions-menu') && 
           !target.closest('td:last-child') &&
           !target.closest('.bx--data-table tbody tr td:last-child') &&
@@ -791,16 +1117,26 @@ export class UsersComponent implements OnInit, OnDestroy {
   }
 
   buildTable() {
-    this.tableModel.header = [
+    // Build header based on scope
+    const headers = [
       new TableHeaderItem({ data: 'Name' }),
       new TableHeaderItem({ data: 'Email' }),
-      new TableHeaderItem({ data: 'Role(s)' }),
-      new TableHeaderItem({ data: 'Company' }),
-      new TableHeaderItem({ data: 'Status' }),
-      new TableHeaderItem({ data: 'Last Login' }),
-      new TableHeaderItem({ data: 'Last Updated' }),
-      new TableHeaderItem({ data: '' }) // Empty header for actions column
+      new TableHeaderItem({ data: 'Role(s)' })
     ];
+    
+    // Only show Company column for Sys Admin
+    if (this.isSysAdmin()) {
+      headers.push(new TableHeaderItem({ data: 'Company' }));
+    }
+    
+    headers.push(
+      new TableHeaderItem({ data: 'Status' }),
+      new TableHeaderItem({ data: 'Last Active' }),
+      new TableHeaderItem({ data: 'Updated' }),
+      new TableHeaderItem({ data: '' }) // Actions column
+    );
+    
+    this.tableModel.header = headers;
   }
 
   private updateTableData() {
@@ -817,25 +1153,38 @@ export class UsersComponent implements OnInit, OnDestroy {
 
       try {
         const filtered = this.filteredUsers();
+        const showCompany = this.isSysAdmin();
+        
+        // Rebuild headers to ensure they match the data columns
+        this.buildTable();
+        
         this.tableModel.data = filtered.map((user, index) => {
-          const firstCell = new TableItem({
-            data: this.getUserDisplayName(user),
-            expandedData: user.id,
-            rawData: { userId: user.id, index: index }
-          });
-          return [
-            firstCell,
+          const row = [
+            new TableItem({
+              data: this.getUserDisplayName(user),
+              expandedData: user.id,
+              rawData: { userId: user.id, index: index }
+            }),
             new TableItem({ data: user.email }),
-            new TableItem({ data: user.roles.join(', '), rawData: { roles: user.roles } }),
-            new TableItem({ data: user.companyName }),
+            new TableItem({ data: user.roles.join(', '), rawData: { roles: user.roles } })
+          ];
+          
+          // Only add Company column for Sys Admin
+          if (showCompany) {
+            row.push(new TableItem({ data: user.companyName }));
+          }
+          
+          row.push(
             new TableItem({ data: user.status, rawData: { status: user.status } }),
-            new TableItem({ data: user.lastLoginAt ? this.formatDate(user.lastLoginAt) : '—' }),
+            new TableItem({ data: user.lastLoginAt ? this.formatRelativeTime(user.lastLoginAt) : '—' }),
             new TableItem({ data: this.formatDate(user.updatedAt) }),
             new TableItem({
               data: '⋮',
               rawData: { isAction: true, userId: user.id }
             })
-          ];
+          );
+          
+          return row;
         });
       } finally {
         this.isUpdatingTable = false;
@@ -853,6 +1202,21 @@ export class UsersComponent implements OnInit, OnDestroy {
     });
   }
 
+  formatRelativeTime(dateString: string): string {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return this.formatDate(dateString);
+  }
+
   getUserDisplayName(user: User): string {
     if (user.firstName || user.lastName) {
       return `${user.firstName || ''} ${user.lastName || ''}`.trim();
@@ -863,36 +1227,6 @@ export class UsersComponent implements OnInit, OnDestroy {
   getCompanyName(companyId: string): string {
     const company = this.companies().find(c => c.id === companyId);
     return company?.name || companyId;
-  }
-
-  getStatusTagType(status: UserStatus): 'red' | 'blue' | 'green' | 'gray' {
-    switch (status) {
-      case 'Active':
-        return 'green';
-      case 'Invited':
-        return 'blue';
-      case 'Suspended':
-        return 'red';
-      case 'Deactivated':
-        return 'gray';
-      default:
-        return 'gray';
-    }
-  }
-
-  getRoleTagType(role: UserRole): 'red' | 'blue' | 'green' | 'gray' | 'magenta' | 'purple' | 'teal' {
-    switch (role) {
-      case 'System Admin':
-        return 'red';
-      case 'Company Manager':
-        return 'blue';
-      case 'Developer':
-        return 'green';
-      case 'Read-only':
-        return 'gray';
-      default:
-        return 'blue';
-    }
   }
 
   onSearchChange() {
@@ -930,7 +1264,6 @@ export class UsersComponent implements OnInit, OnDestroy {
   onTableClick(event: MouseEvent) {
     const target = event.target as HTMLElement;
     
-    // Check if click was on actions column (last column) - kebab menu
     const cell = target.closest('td');
     if (cell) {
       const row = cell.closest('tr');
@@ -939,7 +1272,6 @@ export class UsersComponent implements OnInit, OnDestroy {
         const isLastColumn = cells.length > 0 && cell === cells[cells.length - 1];
         
         if (isLastColumn) {
-          // Find the row index
           const tbody = row.closest('tbody');
           if (tbody) {
             const rows = Array.from(tbody.querySelectorAll('tr'));
@@ -950,35 +1282,22 @@ export class UsersComponent implements OnInit, OnDestroy {
               if (rowIndex < filtered.length) {
                 const user = filtered[rowIndex];
                 if (user) {
-                  // Click was on actions column - open menu positioned at click location
                   this.selectedUser.set(user);
                   const rect = cell.getBoundingClientRect();
                   
-                  // Calculate position with bounds checking
                   const menuWidth = 180;
-                  const menuHeight = 200;
+                  const menuHeight = 250;
                   let left = rect.left;
                   let top = rect.bottom + 4;
                   
-                  // Adjust if menu would go off right edge
                   if (left + menuWidth > window.innerWidth) {
                     left = window.innerWidth - menuWidth - 8;
                   }
-                  
-                  // Adjust if menu would go off bottom edge
                   if (top + menuHeight > window.innerHeight) {
                     top = rect.top - menuHeight - 4;
                   }
-                  
-                  // Ensure menu doesn't go off left edge
-                  if (left < 8) {
-                    left = 8;
-                  }
-                  
-                  // Ensure menu doesn't go off top edge
-                  if (top < 8) {
-                    top = 8;
-                  }
+                  if (left < 8) left = 8;
+                  if (top < 8) top = 8;
                   
                   this.actionsMenuPosition.set({ top, left });
                   this.actionsMenuOpen.set(true);
@@ -995,7 +1314,6 @@ export class UsersComponent implements OnInit, OnDestroy {
   }
 
   onRowClick(event: any) {
-    // Don't process row clicks if clicking on actions menu or actions column
     const target = (event?.event || event)?.target as HTMLElement;
     if (target?.closest('.actions-menu') || target?.closest('td:last-child')) {
       return;
@@ -1017,12 +1335,13 @@ export class UsersComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Regular row click - open details drawer
     this.selectedUser.set(user);
     this.detailsDrawerOpen.set(true);
   }
 
+  // Invite User
   openInviteDrawer() {
+    this.initializeInviteForm();
     this.inviteDrawerOpen.set(true);
   }
 
@@ -1034,11 +1353,13 @@ export class UsersComponent implements OnInit, OnDestroy {
   }
 
   initializeInviteForm() {
+    const companyId = this.currentCompanyId();
+    
     this.inviteForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
       firstName: [''],
       lastName: [''],
-      companyId: ['', Validators.required],
+      companyId: [companyId || '', this.isSysAdmin() ? Validators.required : []],
       roles: ['', Validators.required],
       message: ['']
     });
@@ -1051,11 +1372,15 @@ export class UsersComponent implements OnInit, OnDestroy {
 
     this.inviting.set(true);
     const formValue = this.inviteForm.value;
+    
+    // For Vendor Admin, use their company ID
+    const companyId = this.isSysAdmin() ? formValue.companyId : this.currentCompanyId();
+    
     const payload: InviteUserPayload = {
       email: formValue.email,
       firstName: formValue.firstName || undefined,
       lastName: formValue.lastName || undefined,
-      companyId: formValue.companyId,
+      companyId: companyId!,
       roles: [formValue.roles],
       message: formValue.message || undefined
     };
@@ -1066,7 +1391,6 @@ export class UsersComponent implements OnInit, OnDestroy {
         this.inviting.set(false);
         this.closeInviteDrawer();
         this.loadUsers();
-        // Show toast notification (would use a toast service in production)
         alert('Invite sent');
       },
       error: (err) => {
@@ -1077,17 +1401,121 @@ export class UsersComponent implements OnInit, OnDestroy {
     });
   }
 
+  // Bulk Upload
+  openBulkUploadModal() {
+    this.selectedFile.set(null);
+    this.bulkUploadPreview.set([]);
+    this.bulkUploadModalOpen.set(true);
+  }
+
+  closeBulkUploadModal() {
+    this.bulkUploadModalOpen.set(false);
+    this.selectedFile.set(null);
+    this.bulkUploadPreview.set([]);
+  }
+
+  downloadCSVTemplate() {
+    const headers = this.isSysAdmin() 
+      ? 'email,firstName,lastName,companyId,role'
+      : 'email,firstName,lastName,role';
+    
+    const example = this.isSysAdmin()
+      ? 'john@example.com,John,Doe,1,Developer'
+      : 'john@example.com,John,Doe,Developer';
+    
+    const csv = `${headers}\n${example}`;
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = this.isSysAdmin() ? 'users_template_sysadmin.csv' : 'users_template.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  }
+
+  onFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      const file = input.files[0];
+      this.selectedFile.set(file);
+      this.parseCSVPreview(file);
+    }
+  }
+
+  private parseCSVPreview(file: File) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      const lines = text.split('\n').filter(line => line.trim());
+      
+      if (lines.length <= 1) {
+        this.bulkUploadPreview.set([]);
+        return;
+      }
+      
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+      const emailIndex = headers.indexOf('email');
+      const roleIndex = headers.indexOf('role');
+      
+      const preview: Array<{ email: string; role: string }> = [];
+      
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(',').map(v => v.trim());
+        if (values[emailIndex]) {
+          preview.push({
+            email: values[emailIndex],
+            role: values[roleIndex] || 'Developer'
+          });
+        }
+      }
+      
+      this.bulkUploadPreview.set(preview);
+    };
+    reader.readAsText(file);
+  }
+
+  onBulkUpload() {
+    // TODO: Implement actual bulk upload
+    this.bulkUploading.set(true);
+    
+    setTimeout(() => {
+      this.bulkUploading.set(false);
+      this.closeBulkUploadModal();
+      alert(`Bulk upload complete! ${this.bulkUploadPreview().length} invites sent (demo only)`);
+      this.loadUsers();
+    }, 1500);
+  }
+
+  // User Details
   closeDetailsDrawer() {
     this.detailsDrawerOpen.set(false);
     this.selectedUser.set(null);
   }
 
   onUserUpdated(updatedUser: User) {
-    // Update the user in the local list
     this.users.update(users => 
       users.map(u => u.id === updatedUser.id ? updatedUser : u)
     );
     this.logger.info('User updated in table');
+  }
+
+  // Actions
+  copyEmail() {
+    const user = this.selectedUser();
+    if (!user) return;
+
+    this.actionsMenuOpen.set(false);
+    navigator.clipboard.writeText(user.email).then(() => {
+      this.logger.info(`Email ${user.email} copied to clipboard`);
+    }).catch((err) => {
+      this.logger.error('Error copying email', err);
+    });
+  }
+
+  editRoles() {
+    this.actionsMenuOpen.set(false);
+    this.detailsDrawerOpen.set(true);
+    // The drawer component handles role editing
   }
 
   resendInvite() {
@@ -1098,113 +1526,137 @@ export class UsersComponent implements OnInit, OnDestroy {
     this.usersService.resendInvite(user.id).subscribe({
       next: () => {
         this.logger.info(`Invite resent for ${user.email}`);
+        alert('Invite resent successfully');
         this.loadUsers();
       },
       error: (err) => {
         this.logger.error('Error resending invite', err);
+        alert('Error resending invite');
       }
     });
   }
 
-  deactivateUser() {
+  suspendUser() {
     this.actionsMenuOpen.set(false);
-    const user = this.selectedUser();
-    if (!user) return;
-
-    // Check if this is the last System Admin
-    if (this.isLastSystemAdmin(user)) {
-      alert('Cannot deactivate the last System Admin');
-      return;
-    }
-
-    this.deactivateConfirmOpen.set(true);
+    this.suspendConfirmOpen.set(true);
   }
 
-  confirmDeactivate() {
+  confirmSuspend() {
     const user = this.selectedUser();
     if (!user) return;
 
-    this.usersService.setUserStatus(user.id, 'Deactivated').subscribe({
+    this.usersService.setUserStatus(user.id, 'Suspended').subscribe({
       next: (updatedUser) => {
-        this.logger.info(`User ${user.email} deactivated`);
-        this.deactivateConfirmOpen.set(false);
-        // Update user in list
+        this.logger.info(`User ${user.email} suspended`);
+        this.suspendConfirmOpen.set(false);
         this.users.update(users => 
           users.map(u => u.id === updatedUser.id ? updatedUser : u)
         );
-        // Update selected user if drawer is open
         if (this.selectedUser()?.id === updatedUser.id) {
           this.selectedUser.set(updatedUser);
         }
       },
       error: (err) => {
-        this.logger.error('Error deactivating user', err);
-        this.deactivateConfirmOpen.set(false);
-        if (err.message && err.message.includes('last System Admin')) {
-          alert('Cannot deactivate the last System Admin');
-        } else {
-          alert('Error deactivating user: ' + (err.message || 'Unknown error'));
-        }
+        this.logger.error('Error suspending user', err);
+        this.suspendConfirmOpen.set(false);
+        alert('Error suspending user');
       }
     });
   }
 
-  cancelDeactivate() {
-    this.deactivateConfirmOpen.set(false);
+  cancelSuspend() {
+    this.suspendConfirmOpen.set(false);
   }
 
-  reactivateUser() {
+  unsuspendUser() {
     this.actionsMenuOpen.set(false);
-    this.reactivateConfirmOpen.set(true);
+    this.unsuspendConfirmOpen.set(true);
   }
 
-  confirmReactivate() {
+  confirmUnsuspend() {
     const user = this.selectedUser();
     if (!user) return;
 
     this.usersService.setUserStatus(user.id, 'Active').subscribe({
       next: (updatedUser) => {
-        this.logger.info(`User ${user.email} reactivated`);
-        this.reactivateConfirmOpen.set(false);
-        // Update user in list
+        this.logger.info(`User ${user.email} unsuspended`);
+        this.unsuspendConfirmOpen.set(false);
         this.users.update(users => 
           users.map(u => u.id === updatedUser.id ? updatedUser : u)
         );
-        // Update selected user if drawer is open
         if (this.selectedUser()?.id === updatedUser.id) {
           this.selectedUser.set(updatedUser);
         }
       },
       error: (err) => {
-        this.logger.error('Error reactivating user', err);
-        this.reactivateConfirmOpen.set(false);
-        alert('Error reactivating user: ' + (err.message || 'Unknown error'));
+        this.logger.error('Error unsuspending user', err);
+        this.unsuspendConfirmOpen.set(false);
+        alert('Error unsuspending user');
       }
     });
   }
 
-  cancelReactivate() {
-    this.reactivateConfirmOpen.set(false);
+  cancelUnsuspend() {
+    this.unsuspendConfirmOpen.set(false);
   }
 
-  copyEmail() {
+  removeAccess() {
+    this.actionsMenuOpen.set(false);
     const user = this.selectedUser();
     if (!user) return;
 
-    this.actionsMenuOpen.set(false);
-    navigator.clipboard.writeText(user.email).then(() => {
-      this.logger.info(`Email ${user.email} copied to clipboard`);
-      // Could show a toast notification here
-    }).catch((err) => {
-      this.logger.error('Error copying email', err);
+    if (this.isLastSystemAdmin(user)) {
+      alert('Cannot remove the last System Admin');
+      return;
+    }
+
+    this.removeAccessConfirmOpen.set(true);
+  }
+
+  confirmRemoveAccess() {
+    const user = this.selectedUser();
+    if (!user) return;
+
+    this.usersService.setUserStatus(user.id, 'Deactivated').subscribe({
+      next: (updatedUser) => {
+        this.logger.info(`Access removed for ${user.email}`);
+        this.removeAccessConfirmOpen.set(false);
+        this.users.update(users => 
+          users.map(u => u.id === updatedUser.id ? updatedUser : u)
+        );
+        if (this.selectedUser()?.id === updatedUser.id) {
+          this.selectedUser.set(updatedUser);
+        }
+      },
+      error: (err) => {
+        this.logger.error('Error removing access', err);
+        this.removeAccessConfirmOpen.set(false);
+        if (err.message && err.message.includes('last System Admin')) {
+          alert('Cannot remove the last System Admin');
+        } else {
+          alert('Error removing access');
+        }
+      }
     });
+  }
+
+  cancelRemoveAccess() {
+    this.removeAccessConfirmOpen.set(false);
+  }
+
+  // Legacy methods for drawer compatibility
+  deactivateUser() {
+    this.removeAccess();
+  }
+
+  reactivateUser() {
+    this.unsuspendUser();
   }
 
   isLastSystemAdmin(user: User): boolean {
     if (!user.roles.includes('System Admin') || user.status !== 'Active') {
       return false;
     }
-    // Check if this is the last active System Admin
     const activeSystemAdmins = this.users().filter(u =>
       u.roles.includes('System Admin') && 
       u.status === 'Active' &&

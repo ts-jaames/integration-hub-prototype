@@ -15,6 +15,8 @@ export interface DevAuthUser {
   email: string;
   roles: string[];
   teams?: string[];
+  companyId?: string;
+  companyName?: string;
 }
 
 export interface DevRoleConfig {
@@ -40,7 +42,9 @@ export class DevAuthProvider {
     'company-manager': {
       id: 'manager-1',
       email: 'manager@company.com',
-      roles: ['COMPANY_MANAGER']
+      roles: ['COMPANY_MANAGER'],
+      companyId: '1',
+      companyName: 'Acme Corporation'
     },
     'developer-internal': {
       id: 'dev-1',
@@ -204,6 +208,26 @@ export class DevAuthProvider {
    */
   getRoleConfig(roleId: string): DevRoleConfig | undefined {
     return this.roles.find(r => r.id === roleId);
+  }
+
+  /**
+   * Get current user's company ID (if company-scoped)
+   */
+  getCurrentCompanyId(): string | null {
+    if (!this.isEnabled()) {
+      return null;
+    }
+    return this.currentUser().companyId || null;
+  }
+
+  /**
+   * Get current user's company name (if company-scoped)
+   */
+  getCurrentCompanyName(): string | null {
+    if (!this.isEnabled()) {
+      return null;
+    }
+    return this.currentUser().companyName || null;
   }
 }
 

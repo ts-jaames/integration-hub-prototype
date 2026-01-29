@@ -1,13 +1,31 @@
-<div class="data-table-wrapper">
-  <ibm-table 
-    [model]="model" 
-    [skeleton]="loading"
-    [size]="size"
-    [sortable]="sortable"
-    [stickyHeader]="stickyHeader"
-    (rowClick)="handleRowClick($event)"
-    (selectAll)="onSelectAll.emit($event)"
-    (selectRow)="onSelectRow.emit($event)">
-  </ibm-table>
+<div class="data-table-wrapper" [class.is-loading]="loading">
+  <!-- Skeleton loading overlay -->
+  <div class="skeleton-overlay" *ngIf="loading" [@fadeInOut]>
+    <div class="skeleton-table">
+      <div class="skeleton-header">
+        <div class="skeleton-cell" *ngFor="let col of skeletonColumns"></div>
+      </div>
+      <div class="skeleton-body">
+        <div class="skeleton-row" *ngFor="let row of skeletonRows">
+          <div class="skeleton-cell" *ngFor="let col of skeletonColumns">
+            <div class="skeleton-bar"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Actual table with fade transition -->
+  <div class="table-content" [class.visible]="!loading" [@fadeInOut]>
+    <ibm-table 
+      [model]="model" 
+      [size]="size"
+      [sortable]="sortable"
+      [stickyHeader]="stickyHeader"
+      (rowClick)="handleRowClick($event)"
+      (selectAll)="onSelectAll.emit($event)"
+      (selectRow)="onSelectRow.emit($event)">
+    </ibm-table>
+  </div>
 </div>
 

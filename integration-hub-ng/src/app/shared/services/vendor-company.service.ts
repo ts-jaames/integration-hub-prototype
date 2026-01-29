@@ -98,7 +98,7 @@ export class VendorCompanyService {
   }
 
   /**
-   * Create a new vendor (from completed onboarding - status: Pending Approval)
+   * Create a new vendor (from completed onboarding - status: Onboarded)
    */
   createVendor(data: VendorCompanyFormData): Observable<VendorCompany> {
     if (environment.enableMockData) {
@@ -111,7 +111,7 @@ export class VendorCompanyService {
         primaryContact: data.primaryContactName,
         primaryEmail: data.primaryContactEmail,
         primaryPhone: data.primaryContactPhone,
-        status: 'Pending Approval', // Onboarding completed, awaiting activation
+        status: 'Onboarded', // Onboarding completed, compliance items pending
         riskLevel: 'Medium',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -229,21 +229,22 @@ export class VendorCompanyService {
   }
 
   /**
-   * Activate vendor (Pending Approval → Active)
+   * Activate vendor (Onboarded → Active)
+   * Requires all compliance items to be complete
    */
   activateVendor(id: string): Observable<VendorCompany> {
     const vendor = this.vendors().find(v => v.id === id);
     if (!vendor) {
       throw new Error(`Vendor with id ${id} not found`);
     }
-    if (vendor.status !== 'Pending Approval') {
-      throw new Error(`Cannot activate vendor with status "${vendor.status}". Must be "Pending Approval".`);
+    if (vendor.status !== 'Onboarded') {
+      throw new Error(`Cannot activate vendor with status "${vendor.status}". Must be "Onboarded".`);
     }
     return this.transitionStatus(id, 'Active', 'Vendor activated', `Vendor activated by ${MOCK_CURRENT_USER.name}`);
   }
 
   /**
-   * Reject vendor (Pending Approval → Rejected)
+   * Reject vendor (Onboarded → Rejected)
    * Requires a rejection reason for audit
    */
   rejectVendor(id: string, reason: string): Observable<VendorCompany> {
@@ -254,22 +255,22 @@ export class VendorCompanyService {
     if (!vendor) {
       throw new Error(`Vendor with id ${id} not found`);
     }
-    if (vendor.status !== 'Pending Approval') {
-      throw new Error(`Cannot reject vendor with status "${vendor.status}". Must be "Pending Approval".`);
+    if (vendor.status !== 'Onboarded') {
+      throw new Error(`Cannot reject vendor with status "${vendor.status}". Must be "Onboarded".`);
     }
     return this.transitionStatus(id, 'Rejected', 'Vendor rejected', reason);
   }
 
   /**
-   * Archive vendor (Active or Rejected → Archived)
+   * Archive vendor (Active, Onboarded, or Rejected → Archived)
    */
   archiveVendor(id: string, reason?: string): Observable<VendorCompany> {
     const vendor = this.vendors().find(v => v.id === id);
     if (!vendor) {
       throw new Error(`Vendor with id ${id} not found`);
     }
-    if (vendor.status !== 'Active' && vendor.status !== 'Rejected') {
-      throw new Error(`Cannot archive vendor with status "${vendor.status}". Must be "Active" or "Rejected".`);
+    if (vendor.status !== 'Active' && vendor.status !== 'Onboarded' && vendor.status !== 'Rejected') {
+      throw new Error(`Cannot archive vendor with status "${vendor.status}". Must be "Active", "Onboarded", or "Rejected".`);
     }
     return this.transitionStatus(id, 'Archived', 'Vendor archived', reason || `Vendor archived by ${MOCK_CURRENT_USER.name}`);
   }
@@ -380,8 +381,8 @@ export class VendorCompanyService {
 
     if (vendor.status === 'Draft') {
       blockers.push('Vendor onboarding is incomplete');
-    } else if (vendor.status === 'Pending Approval') {
-      blockers.push('Vendor is pending approval');
+    } else if (vendor.status === 'Onboarded') {
+      blockers.push('Vendor has incomplete compliance items');
     } else if (vendor.status === 'Rejected') {
       blockers.push(`Vendor was rejected${vendor.rejectionReason ? ': ' + vendor.rejectionReason : ''}`);
     } else if (vendor.status === 'Archived') {
@@ -1018,7 +1019,7 @@ export class VendorCompanyService {
         apiKeys: [],
         activityLog: []
       },
-      // Pending Approval vendor (completed onboarding, awaiting activation)
+      // Onboarded vendor (completed onboarding, compliance items pending)
       {
         id: '7',
         name: 'QuickPay Financial',
@@ -1026,7 +1027,7 @@ export class VendorCompanyService {
         primaryContact: 'Robert Martinez',
         primaryEmail: 'rmartinez@quickpay.com',
         primaryPhone: '+1-555-0107',
-        status: 'Pending Approval',
+        status: 'Onboarded',
         tier: 'Tier 1',
         riskLevel: 'Low',
         createdAt: '2024-05-01T14:00:00Z',
@@ -1204,7 +1205,7 @@ export class VendorCompanyService {
         apiKeys: [],
         activityLog: []
       },
-      // Another Pending Approval vendor
+      // Another Onboarded vendor (compliance items pending)
       {
         id: '12',
         name: 'PaymentStream',
@@ -1212,7 +1213,7 @@ export class VendorCompanyService {
         primaryContact: 'Maria Garcia',
         primaryEmail: 'mgarcia@paymentstream.com',
         primaryPhone: '+1-555-0112',
-        status: 'Pending Approval',
+        status: 'Onboarded',
         tier: 'Tier 2',
         riskLevel: 'Medium',
         createdAt: '2024-06-18T09:00:00Z',

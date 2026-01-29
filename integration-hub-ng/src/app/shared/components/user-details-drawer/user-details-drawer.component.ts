@@ -2,7 +2,8 @@ import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, OnChanges, S
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ButtonModule, InputModule, SelectModule, TagModule } from 'carbon-components-angular';
-import { User, UserStatus, UserRole } from '../../models/user.model';
+import { User, UserStatus, UserRole, UserActivityEntry, UserActivityType } from '../../models/user.model';
+import { RoleService } from '../../../core/role.service';
 import { UsersService } from '../../services/users.service';
 import { LoggerService } from '../../../core/services/logger.service';
 
@@ -124,46 +125,110 @@ import { LoggerService } from '../../../core/services/logger.service';
         <div class="drawer-content" *ngIf="user; else noUser">
           <!-- View Mode -->
           <div *ngIf="!editMode()" class="view-mode">
-            <div class="detail-section">
-              <div class="detail-item">
-                <label>First Name</label>
-                <p>{{ user?.firstName || '—' }}</p>
-              </div>
-              <div class="detail-item">
-                <label>Last Name</label>
-                <p>{{ user?.lastName || '—' }}</p>
-              </div>
-              <div class="detail-item">
-                <label>Email</label>
-                <p>{{ user?.email || '—' }}</p>
-              </div>
-              <div class="detail-item">
-                <label>Company</label>
-                <p>{{ user?.companyName || '—' }}</p>
-              </div>
-              <div class="detail-item">
-                <label>Roles</label>
-                <div class="roles-list">
-                  <ibm-tag *ngFor="let role of user?.roles || []" [type]="getRoleTagType(role)" size="sm">
-                    {{ role }}
-                  </ibm-tag>
+            <!-- Identity Section -->
+            <div class="section-group">
+              <h4 class="section-title">Identity</h4>
+              <div class="detail-section">
+                <div class="detail-item">
+                  <label>First Name</label>
+                  <p>{{ user?.firstName || '—' }}</p>
+                </div>
+                <div class="detail-item">
+                  <label>Last Name</label>
+                  <p>{{ user?.lastName || '—' }}</p>
+                </div>
+                <div class="detail-item">
+                  <label>Email</label>
+                  <p>{{ user?.email || '—' }}</p>
                 </div>
               </div>
-              <div class="detail-item" *ngIf="user?.lastLoginAt">
-                <label>Last Login</label>
-                <p>{{ user.lastLoginAt ? formatDate(user.lastLoginAt) : '—' }}</p>
+            </div>
+
+            <!-- Company & Roles Section -->
+            <div class="section-group">
+              <h4 class="section-title">Company & Roles</h4>
+              <div class="detail-section">
+                <div class="detail-item">
+                  <label>Company</label>
+                  <p>{{ user?.companyName || '—' }}</p>
+                </div>
+                <div class="detail-item">
+                  <label>Roles</label>
+                  <div class="roles-list">
+                    <ibm-tag *ngFor="let role of user?.roles || []" [type]="getRoleTagType(role)" size="sm">
+                      {{ role }}
+                    </ibm-tag>
+                  </div>
+                </div>
+                <div class="detail-item">
+                  <label>Status</label>
+                  <p>
+                    <ibm-tag [type]="getStatusTagType(user!.status)" size="sm">
+                      {{ user?.status }}
+                    </ibm-tag>
+                  </p>
+                </div>
               </div>
-              <div class="detail-item">
-                <label>Last Updated</label>
-                <p>{{ user?.updatedAt ? formatDate(user.updatedAt) : '—' }}</p>
+            </div>
+
+            <!-- Invite History Section -->
+            <div class="section-group" *ngIf="user?.invitedAt || user?.inviteResentAt">
+              <h4 class="section-title">Invite History</h4>
+              <div class="detail-section">
+                <div class="detail-item" *ngIf="user?.invitedAt">
+                  <label>Original Invitation</label>
+                  <p>{{ formatDate(user!.invitedAt!) }} {{ user?.invitedBy ? 'by ' + user.invitedBy : '' }}</p>
+                </div>
+                <div class="detail-item" *ngIf="user?.inviteResentAt">
+                  <label>Last Resent</label>
+                  <p>{{ formatDate(user!.inviteResentAt!) }} {{ user?.inviteResentBy ? 'by ' + user.inviteResentBy : '' }}</p>
+                </div>
+                <div class="detail-item" *ngIf="user?.inviteCount && (user?.inviteCount ?? 0) > 1">
+                  <label>Total Invites Sent</label>
+                  <p>{{ user?.inviteCount }}</p>
+                </div>
               </div>
-              <div class="detail-item" *ngIf="user?.createdAt">
-                <label>Created</label>
-                <p>{{ formatDate(user.createdAt) }}</p>
+            </div>
+
+            <!-- Timestamps Section -->
+            <div class="section-group">
+              <h4 class="section-title">Account Details</h4>
+              <div class="detail-section">
+                <div class="detail-item" *ngIf="user?.lastLoginAt">
+                  <label>Last Login</label>
+                  <p>{{ formatDate(user!.lastLoginAt!) }}</p>
+                </div>
+                <div class="detail-item">
+                  <label>Last Updated</label>
+                  <p>{{ user?.updatedAt ? formatDate(user.updatedAt) : '—' }}</p>
+                </div>
+                <div class="detail-item" *ngIf="user?.createdAt">
+                  <label>Created</label>
+                  <p>{{ formatDate(user.createdAt) }}</p>
+                </div>
               </div>
-              <div class="detail-item" *ngIf="user?.invitedAt">
-                <label>Invitation Sent</label>
-                <p>{{ user.invitedAt ? formatDate(user.invitedAt) : '—' }}</p>
+            </div>
+
+            <!-- Activity Timeline Section -->
+            <div class="section-group">
+              <h4 class="section-title">Activity Timeline</h4>
+              <div class="activity-timeline">
+                <div *ngFor="let activity of userActivityTimeline()" class="timeline-entry">
+                  <div class="timeline-marker" [class]="'marker-' + activity.type"></div>
+                  <div class="timeline-content">
+                    <div class="timeline-header">
+                      <span class="timeline-action">{{ getActivityLabel(activity.type) }}</span>
+                      <span class="timeline-time">{{ formatRelativeTime(activity.timestamp) }}</span>
+                    </div>
+                    <p class="timeline-details" *ngIf="activity.details">{{ activity.details }}</p>
+                    <p class="timeline-actor" *ngIf="activity.actor">{{ activity.actor.name }}</p>
+                  </div>
+                </div>
+                
+                <!-- Empty state -->
+                <div class="timeline-empty" *ngIf="userActivityTimeline().length === 0">
+                  <p>No activity recorded yet</p>
+                </div>
               </div>
             </div>
           </div>
@@ -503,6 +568,141 @@ import { LoggerService } from '../../../core/services/logger.service';
     }
 
 
+    /* Section Groups */
+    .section-group {
+      margin-bottom: 1.5rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--linear-border, rgba(255, 255, 255, 0.1));
+    }
+
+    .section-group:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .section-title {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--linear-text-tertiary, rgba(255, 255, 255, 0.5));
+      margin: 0 0 1rem 0;
+    }
+
+    /* Activity Timeline */
+    .activity-timeline {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .timeline-entry {
+      display: flex;
+      gap: 0.75rem;
+      padding: 0.75rem 0;
+      position: relative;
+    }
+
+    .timeline-entry:not(:last-child)::before {
+      content: '';
+      position: absolute;
+      left: 5px;
+      top: 28px;
+      bottom: 0;
+      width: 2px;
+      background: var(--linear-border, rgba(255, 255, 255, 0.1));
+    }
+
+    .timeline-marker {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--linear-accent, #4589ff);
+      flex-shrink: 0;
+      margin-top: 4px;
+    }
+
+    .timeline-marker.marker-invited {
+      background: #3b82f6;
+    }
+
+    .timeline-marker.marker-invite_resent {
+      background: #8b5cf6;
+    }
+
+    .timeline-marker.marker-activated {
+      background: #10b981;
+    }
+
+    .timeline-marker.marker-role_changed {
+      background: #f59e0b;
+    }
+
+    .timeline-marker.marker-suspended {
+      background: #ef4444;
+    }
+
+    .timeline-marker.marker-unsuspended {
+      background: #22c55e;
+    }
+
+    .timeline-marker.marker-deactivated {
+      background: #6b7280;
+    }
+
+    .timeline-marker.marker-login {
+      background: #06b6d4;
+    }
+
+    .timeline-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .timeline-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 0.5rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .timeline-action {
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: var(--linear-text-primary, #f4f4f4);
+    }
+
+    .timeline-time {
+      font-size: 0.6875rem;
+      color: var(--linear-text-tertiary, rgba(255, 255, 255, 0.5));
+      flex-shrink: 0;
+    }
+
+    .timeline-details {
+      font-size: 0.8125rem;
+      color: var(--linear-text-secondary, #a8a8a8);
+      margin: 0 0 0.25rem 0;
+    }
+
+    .timeline-actor {
+      font-size: 0.75rem;
+      color: var(--linear-text-tertiary, rgba(255, 255, 255, 0.5));
+      margin: 0;
+    }
+
+    .timeline-empty {
+      padding: 1rem;
+      text-align: center;
+      color: var(--linear-text-secondary, #a8a8a8);
+    }
+
+    .timeline-empty p {
+      font-size: 0.8125rem;
+      margin: 0;
+    }
+
     /* Scrollbar */
     .drawer-body::-webkit-scrollbar {
       width: 6px;
@@ -536,17 +736,136 @@ export class UserDetailsDrawerComponent implements OnInit, OnDestroy, OnChanges 
   private usersService = inject(UsersService);
   private logger = inject(LoggerService);
   private fb = inject(FormBuilder);
+  private roleService = inject(RoleService);
 
   editMode = signal(false);
   saving = signal(false);
   editForm!: FormGroup;
   selectedRoles = signal<UserRole[]>([]);
 
+  // Permission checks
+  isReadOnly = computed(() => this.roleService.isReadOnly());
+  canManageUserLifecycle = computed(() => this.roleService.canManageUserLifecycle());
+
   readonly roleOptions: UserRole[] = ['System Admin', 'Company Manager', 'Developer', 'Read-only'];
 
   companyOptions = computed(() => {
     return this.companies.map(c => ({ value: c.id, label: c.name }));
   });
+
+  // Generate activity timeline from user data
+  userActivityTimeline = computed((): UserActivityEntry[] => {
+    const u = this.user;
+    if (!u) return [];
+
+    // If user has explicit activity history, use it
+    if (u.activityHistory && u.activityHistory.length > 0) {
+      return [...u.activityHistory].sort((a, b) => 
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      );
+    }
+
+    // Otherwise, build timeline from user data
+    const entries: UserActivityEntry[] = [];
+
+    // Invited
+    if (u.invitedAt) {
+      entries.push({
+        id: 'invited',
+        type: 'invited',
+        timestamp: u.invitedAt,
+        actor: u.invitedBy ? { name: u.invitedBy } : undefined,
+        details: `Invitation sent to ${u.email}`
+      });
+    }
+
+    // Invite resent
+    if (u.inviteResentAt) {
+      entries.push({
+        id: 'invite_resent',
+        type: 'invite_resent',
+        timestamp: u.inviteResentAt,
+        actor: u.inviteResentBy ? { name: u.inviteResentBy } : undefined,
+        details: 'Invitation was resent'
+      });
+    }
+
+    // Activated (first login or status change to Active)
+    if (u.status === 'Active' && u.lastLoginAt) {
+      entries.push({
+        id: 'activated',
+        type: 'activated',
+        timestamp: u.lastLoginAt,
+        details: 'Account activated'
+      });
+    }
+
+    // Suspended
+    if (u.status === 'Suspended' && u.suspendedAt) {
+      entries.push({
+        id: 'suspended',
+        type: 'suspended',
+        timestamp: u.suspendedAt,
+        actor: u.suspendedBy ? { name: u.suspendedBy } : undefined,
+        details: u.suspendReason || 'Account suspended'
+      });
+    }
+
+    // Deactivated
+    if (u.status === 'Deactivated') {
+      entries.push({
+        id: 'deactivated',
+        type: 'deactivated',
+        timestamp: u.updatedAt,
+        details: 'Account deactivated'
+      });
+    }
+
+    // Created
+    if (u.createdAt) {
+      entries.push({
+        id: 'created',
+        type: 'invited',
+        timestamp: u.createdAt,
+        details: 'User account created'
+      });
+    }
+
+    // Sort by timestamp descending
+    return entries.sort((a, b) => 
+      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+  });
+
+  getActivityLabel(type: UserActivityType): string {
+    const labels: Record<UserActivityType, string> = {
+      'invited': 'Invited',
+      'invite_resent': 'Invite Resent',
+      'activated': 'Activated',
+      'role_changed': 'Role Changed',
+      'suspended': 'Suspended',
+      'unsuspended': 'Unsuspended',
+      'deactivated': 'Deactivated',
+      'login': 'Logged In',
+      'password_changed': 'Password Changed'
+    };
+    return labels[type] || type;
+  }
+
+  formatRelativeTime(dateString: string): string {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return this.formatDate(dateString);
+  }
 
   constructor() {
     // Listen for ESC key

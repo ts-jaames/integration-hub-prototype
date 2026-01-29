@@ -6,6 +6,128 @@
 :host {
   .data-table-wrapper {
     width: 100%;
+    position: relative;
+    min-height: 200px; // Prevent layout collapse during loading
+  }
+
+  // Skeleton loading overlay
+  .skeleton-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1;
+  }
+
+  .skeleton-table {
+    width: 100%;
+  }
+
+  .skeleton-header {
+    display: flex;
+    gap: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    margin-bottom: 0.5rem;
+
+    .skeleton-cell {
+      flex: 1;
+      height: 14px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 4px;
+      max-width: 120px;
+    }
+  }
+
+  .skeleton-body {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .skeleton-row {
+    display: flex;
+    gap: 1rem;
+    padding: 0.875rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    .skeleton-cell {
+      flex: 1;
+      display: flex;
+      align-items: center;
+    }
+
+    .skeleton-bar {
+      height: 12px;
+      background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.06) 0%,
+        rgba(255, 255, 255, 0.12) 50%,
+        rgba(255, 255, 255, 0.06) 100%
+      );
+      background-size: 200% 100%;
+      animation: skeleton-shimmer 1.5s ease-in-out infinite;
+      border-radius: 4px;
+      width: 70%;
+    }
+
+    // Vary cell widths based on column position for visual interest
+    .skeleton-cell:nth-child(1) .skeleton-bar { width: 85%; }
+    .skeleton-cell:nth-child(2) .skeleton-bar { width: 55%; }
+    .skeleton-cell:nth-child(3) .skeleton-bar { width: 70%; }
+    .skeleton-cell:nth-child(4) .skeleton-bar { width: 80%; }
+    .skeleton-cell:nth-child(5) .skeleton-bar { width: 50%; }
+    .skeleton-cell:nth-child(6) .skeleton-bar { width: 65%; }
+  }
+
+  // Stagger skeleton row animation for smoother feel
+  @for $i from 1 through 10 {
+    .skeleton-row:nth-child(#{$i}) .skeleton-bar {
+      animation-delay: #{$i * 0.05}s;
+    }
+  }
+
+  @keyframes skeleton-shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+
+  // Table content wrapper
+  .table-content {
+    opacity: 0;
+    transition: opacity 200ms ease-out;
+
+    &.visible {
+      opacity: 1;
+    }
+  }
+
+  // Loading state adjustments
+  .data-table-wrapper.is-loading {
+    .table-content {
+      visibility: hidden;
+      position: absolute;
+      pointer-events: none;
+    }
+  }
+
+  // Reduced motion support
+  @media (prefers-reduced-motion: reduce) {
+    .skeleton-bar {
+      animation: none;
+      background: rgba(255, 255, 255, 0.08);
+    }
+    
+    .table-content {
+      transition: none;
+    }
   }
 
   ::ng-deep ibm-table {

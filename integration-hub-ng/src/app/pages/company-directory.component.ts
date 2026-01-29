@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, signal, computed, inject, effect } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, computed, inject, effect, ViewChild, TemplateRef, AfterViewInit } from '@angular/core';
 import { Router, NavigationEnd } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -144,6 +144,11 @@ import { LoggerService } from '../core/services/logger.service';
       </div>
       
     </div>
+
+    <!-- Status cell template -->
+    <ng-template #statusTemplate let-data="data">
+      <span class="status-pill" [attr.data-status]="data">{{ data }}</span>
+    </ng-template>
 
     <!-- Edit Modal -->
     <ibm-modal
@@ -357,12 +362,55 @@ import { LoggerService } from '../core/services/logger.service';
       font-size: 0.875rem;
       color: var(--linear-text-secondary);
     }
+
+    /* Status pill styles */
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.125rem 0.5rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .status-pill[data-status="Active"] {
+      background: rgba(16, 185, 129, 0.15);
+      color: #10b981;
+    }
+
+    .status-pill[data-status="Onboarded"] {
+      background: rgba(59, 130, 246, 0.15);
+      color: #3b82f6;
+    }
+
+    .status-pill[data-status="Draft"] {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--linear-text-secondary);
+    }
+
+    .status-pill[data-status="Rejected"] {
+      background: rgba(239, 68, 68, 0.15);
+      color: #ef4444;
+    }
+
+    .status-pill[data-status="Archived"] {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--linear-text-tertiary);
+    }
+
+    .status-pill[data-status="Suspended"] {
+      background: rgba(239, 68, 68, 0.15);
+      color: #ef4444;
+    }
   `]
 })
-export class CompanyDirectoryComponent implements OnInit, OnDestroy {
+export class CompanyDirectoryComponent implements OnInit, OnDestroy, AfterViewInit {
   private router = inject(Router);
   private vendorService = inject(VendorCompanyService);
   private logger = inject(LoggerService);
+
+  @ViewChild('statusTemplate', { static: false }) statusTemplate!: TemplateRef<any>;
 
   loading = signal(false);
   companies = signal<VendorCompany[]>([]);
@@ -377,14 +425,14 @@ export class CompanyDirectoryComponent implements OnInit, OnDestroy {
   private updateTableTimeout: any = null;
   private routerSubscription?: Subscription;
 
-  statusOptions: VendorStatus[] = ['Draft', 'Pending Approval', 'Active', 'Rejected', 'Archived'];
+  statusOptions: VendorStatus[] = ['Draft', 'Onboarded', 'Active', 'Rejected', 'Archived'];
   complianceStateOptions: VendorComplianceState[] = ['Complete', 'Missing Docs', 'Expired'];
 
   // Unified status options (excluding Archived by default - handled separately)
   readonly statusSelectOptions: SelectOption[] = [
     { value: '', label: 'All Statuses' },
     { value: 'Draft', label: 'Draft' },
-    { value: 'Pending Approval', label: 'Pending Approval' },
+    { value: 'Onboarded', label: 'Onboarded' },
     { value: 'Active', label: 'Active' },
     { value: 'Rejected', label: 'Rejected' }
   ];
@@ -446,7 +494,7 @@ export class CompanyDirectoryComponent implements OnInit, OnDestroy {
       });
     }
     
-    // Sort (with status priority: Draft and Pending Approval first)
+    // Sort (with status priority: Draft and Onboarded first)
     filtered.sort((a, b) => {
       switch (sortBy) {
         case 'name':
@@ -456,7 +504,7 @@ export class CompanyDirectoryComponent implements OnInit, OnDestroy {
         case 'updated':
           return new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime();
         case 'status':
-          const statusOrder = ['Draft', 'Pending Approval', 'Active', 'Rejected', 'Archived'];
+          const statusOrder = ['Draft', 'Onboarded', 'Active', 'Rejected', 'Archived'];
           return statusOrder.indexOf(a.status) - statusOrder.indexOf(b.status);
         default:
           return 0;
@@ -498,6 +546,13 @@ export class CompanyDirectoryComponent implements OnInit, OnDestroy {
           this.loadVendors();
         }
       });
+  }
+
+  ngAfterViewInit() {
+    // Re-render table to apply status template after view init
+    if (this.companies().length > 0) {
+      this.updateTableData();
+    }
   }
 
   ngOnDestroy() {
@@ -564,9 +619,15 @@ export class CompanyDirectoryComponent implements OnInit, OnDestroy {
             ? `${progress.completedSteps} of ${progress.totalSteps} steps`
             : company.status === 'Active' ? 'Complete' : '—';
           
+          // Status cell with template for styled pill
+          const statusCell = new TableItem({ data: company.status });
+          if (this.statusTemplate) {
+            statusCell.template = this.statusTemplate;
+          }
+
           return [
             firstCell,
-            new TableItem({ data: company.status }),
+            statusCell,
             new TableItem({ data: progressText }),
             new TableItem({ data: `${company.primaryContact} (${company.primaryEmail})` }),
             new TableItem({ data: this.formatDate(company.updatedAt || company.createdAt) })

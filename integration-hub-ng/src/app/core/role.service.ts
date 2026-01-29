@@ -175,4 +175,105 @@ export class RoleService {
     const role = this.getCurrentRole();
     return ['system-administrator', 'compliance-auditor'].includes(role);
   }
+
+  // Scope helpers for User Management
+  
+  /**
+   * Check if current user has global (Sys Admin) scope
+   * Sys Admins can view/manage users across all companies
+   */
+  hasGlobalScope(): boolean {
+    const role = this.getCurrentRole();
+    return role === 'system-administrator';
+  }
+
+  /**
+   * Check if current user has company-scoped (Vendor Admin) scope
+   * Vendor Admins can only view/manage users within their company
+   */
+  hasCompanyScope(): boolean {
+    const role = this.getCurrentRole();
+    return role === 'company-manager';
+  }
+
+  /**
+   * Get the current user's company ID (for company-scoped users)
+   * Returns null for global-scoped users
+   */
+  getCurrentCompanyId(): string | null {
+    if (this.hasGlobalScope()) {
+      return null;
+    }
+    
+    if (environment.enableDevAuth) {
+      return this.devAuth.getCurrentCompanyId();
+    }
+    
+    // In production, would get from real auth service
+    return null;
+  }
+
+  /**
+   * Get the current user's company name (for company-scoped users)
+   * Returns null for global-scoped users
+   */
+  getCurrentCompanyName(): string | null {
+    if (this.hasGlobalScope()) {
+      return null;
+    }
+    
+    if (environment.enableDevAuth) {
+      return this.devAuth.getCurrentCompanyName();
+    }
+    
+    // In production, would get from real auth service
+    return null;
+  }
+
+  // Read-only role constraints
+  
+  /**
+   * Check if current user has read-only permissions
+   * Read-only users cannot perform write actions
+   */
+  isReadOnly(): boolean {
+    const role = this.getCurrentRole();
+    return role === 'business-viewer' || role === 'compliance-auditor';
+  }
+
+  /**
+   * Check if current user can invite users
+   */
+  canInviteUsers(): boolean {
+    if (this.isReadOnly()) return false;
+    const role = this.getCurrentRole();
+    return ['system-administrator', 'company-manager'].includes(role);
+  }
+
+  /**
+   * Check if current user can manage service accounts
+   */
+  canManageServiceAccounts(): boolean {
+    if (this.isReadOnly()) return false;
+    const role = this.getCurrentRole();
+    return ['system-administrator', 'company-manager', 'developer-internal', 'developer-external'].includes(role);
+  }
+
+  /**
+   * Check if current user can edit vendor details
+   */
+  canEditVendor(): boolean {
+    if (this.isReadOnly()) return false;
+    const role = this.getCurrentRole();
+    return ['system-administrator', 'company-manager', 'support-vendor-success'].includes(role);
+  }
+
+  /**
+   * Check if current user can manage user lifecycle (suspend/deactivate)
+   */
+  canManageUserLifecycle(): boolean {
+    if (this.isReadOnly()) return false;
+    const role = this.getCurrentRole();
+    return ['system-administrator', 'company-manager'].includes(role);
+  }
 }
