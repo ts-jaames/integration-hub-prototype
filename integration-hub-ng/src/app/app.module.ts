@@ -45,6 +45,7 @@ import { PlatformSettingsComponent } from './pages/platform-settings.component';
 import { SupportTicketsComponent } from './pages/support-tickets.component';
 import { CompanyDirectoryComponent } from './pages/company-directory.component';
 import { CompanyDetailsComponent } from './pages/company-details.component';
+import { ApplicationDirectoryComponent } from './pages/application-directory.component';
 import { VendorOnboardingPage } from './pages/vendor-onboarding.page';
 import { AiAssistantInsightsComponent } from './pages/ai-assistant-insights.component';
 import { AiAssistantInsightDetailComponent } from './pages/ai-assistant-insight-detail.component';
@@ -113,6 +114,7 @@ import { routes } from './app.routes';
     SupportTicketsComponent,
     CompanyDirectoryComponent,
     CompanyDetailsComponent,
+    ApplicationDirectoryComponent,
     AiAssistantInsightsComponent,
     AiAssistantInsightDetailComponent,
     AiAssistantWorkflowComponent,

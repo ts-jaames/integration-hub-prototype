@@ -29,6 +29,7 @@ import { PlatformSettingsComponent } from './pages/platform-settings.component';
 import { SupportTicketsComponent } from './pages/support-tickets.component';
 import { CompanyDirectoryComponent } from './pages/company-directory.component';
 import { CompanyDetailsComponent } from './pages/company-details.component';
+import { ApplicationDirectoryComponent } from './pages/application-directory.component';
 import { VendorOnboardingPage } from './pages/vendor-onboarding.page';
 import { AiAssistantInsightsComponent } from './pages/ai-assistant-insights.component';
 import { AiAssistantInsightDetailComponent } from './pages/ai-assistant-insight-detail.component';
@@ -51,6 +52,7 @@ export const routes: Routes = [
   { path: 'companies', component: CompaniesComponent },
   { path: 'users', component: UsersComponent },
   { path: 'apis', component: ApisComponent },
+  { path: 'apis/:id', component: ApisComponent }, // Stub - will be replaced with detail component
   { path: 'monitoring', component: MonitoringComponent },
   { path: 'compliance', component: ComplianceComponent },
   { path: 'docs/webhooks', component: WebhooksDocsComponent },
@@ -65,6 +67,16 @@ export const routes: Routes = [
     path: 'service-accounts',
     component: ServiceAccountsPage,
     canActivate: [devRoleGuard]
+  },
+  
+  // Application management routes
+  {
+    path: 'applications',
+    component: ApplicationDirectoryComponent
+  },
+  {
+    path: 'applications/:id',
+    component: ApplicationDirectoryComponent // Stub - will be replaced with detail component
   },
   
   // Vendor management routes

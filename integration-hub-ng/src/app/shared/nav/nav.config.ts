@@ -27,8 +27,8 @@ export const NAV_SECTIONS: NavSection[] = [
     id: 'applications-apis',
     label: 'Applications & APIs',
     links: [
+      { label: 'Applications', path: '/applications', icon: 'building' },
       { label: 'API Catalog', path: '/apis', icon: 'api' },
-      { label: 'Webhooks & Events', path: '/docs/webhooks', icon: 'api' },
       { label: 'Credentials & Keys', path: '/credentials-keys', icon: 'key' }
     ]
   },

@@ -1,6 +1,29 @@
 export type UserStatus = 'Active' | 'Invited' | 'Suspended' | 'Deactivated';
 export type UserRole = 'System Admin' | 'Company Manager' | 'Developer' | 'Read-only';
 
+export type UserActivityType = 
+  | 'invited' 
+  | 'invite_resent' 
+  | 'activated' 
+  | 'role_changed' 
+  | 'suspended' 
+  | 'unsuspended' 
+  | 'deactivated'
+  | 'login'
+  | 'password_changed';
+
+export interface UserActivityEntry {
+  id: string;
+  type: UserActivityType;
+  timestamp: string;
+  actor?: {
+    name: string;
+    email?: string;
+  };
+  details?: string;
+  metadata?: Record<string, any>;
+}
+
 export interface User {
   id: string;
   firstName?: string;
@@ -16,6 +39,16 @@ export interface User {
   mfaEnabled?: boolean;
   invitedAt?: string;
   invitedBy?: string;
+  // Suspension tracking
+  suspendedAt?: string;
+  suspendedBy?: string;
+  suspendReason?: string;
+  // Invite history
+  inviteResentAt?: string;
+  inviteResentBy?: string;
+  inviteCount?: number;
+  // Activity history
+  activityHistory?: UserActivityEntry[];
 }
 
 export interface InviteUserPayload {

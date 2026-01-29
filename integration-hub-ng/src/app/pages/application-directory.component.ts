@@ -20,35 +20,35 @@ import { IconButtonComponent } from '../shared/components/primitives/icon-button
 import { FilterChipComponent } from '../shared/components/primitives/filter-chip/filter-chip.component';
 import { LoggerService } from '../core/services/logger.service';
 
-// API model
-export interface Api {
+// Application model
+export interface Application {
   id: string;
   name: string;
-  domain: string;
-  status: 'Active' | 'Deprecated' | 'Experimental' | 'Archived';
+  shortName: string;
+  status: 'Active' | 'Inactive' | 'Suspended' | 'Draft' | 'Archived';
+  type: 'Internal' | 'External';
   environments: ('Sandbox' | 'Production')[];
-  consumerCount: number;
-  consumers: string[];
-  backedByVendor: string | null;
-  vendorId: string | null;
-  version: string;
+  owner: string;
+  ownerType: 'team' | 'vendor';
+  apiCount: number;
+  apis: string[];
   createdAt: string;
   updatedAt: string;
   description?: string;
 }
 
 @Component({
-  selector: 'app-apis',
+  selector: 'app-application-directory',
   standalone: false,
   template: `
     <div class="page-container">
       <div class="page-header">
         <div>
-          <h1>API Catalog</h1>
-          <p class="page-subtitle">Browse and manage all internal FSR APIs available to applications and integrations.</p>
+          <h1>Application Directory</h1>
+          <p class="page-subtitle">Manage all integration applications that consume FSR APIs.</p>
         </div>
         <div class="header-actions">
-          <button ibmButton="primary" (click)="addNewApi()" type="button">Add New API</button>
+          <button ibmButton="primary" (click)="addNewApplication()" type="button">Add New Application</button>
         </div>
       </div>
 
@@ -58,11 +58,11 @@ export interface Api {
             <div class="toolbar-search">
               <app-text-input
                 label="Search"
-                placeholder="Search by API name, domain, or vendor..."
+                placeholder="Search by application name, owner, or ID..."
                 [ngModel]="searchQuery()"
                 (ngModelChange)="searchQuery.set($event); onSearchChange()"
                 (escape)="clearSearch()"
-                ariaLabel="Search APIs">
+                ariaLabel="Search applications">
               </app-text-input>
             </div>
             
@@ -76,11 +76,11 @@ export interface Api {
               </app-select>
               
               <app-select
-                label="Environment"
-                [options]="environmentSelectOptions"
-                [ngModel]="selectedEnvironment()"
-                (ngModelChange)="selectedEnvironment.set($event); onSearchChange()"
-                ariaLabel="Filter by environment">
+                label="Type"
+                [options]="typeSelectOptions"
+                [ngModel]="selectedType()"
+                (ngModelChange)="selectedType.set($event); onSearchChange()"
+                ariaLabel="Filter by type">
               </app-select>
               
               <app-select
@@ -88,7 +88,7 @@ export interface Api {
                 [options]="showArchivedOptions"
                 [ngModel]="showArchived()"
                 (ngModelChange)="showArchived.set($event); onSearchChange()"
-                ariaLabel="Show archived APIs">
+                ariaLabel="Show archived applications">
               </app-select>
             </div>
             
@@ -132,10 +132,10 @@ export interface Api {
               (remove)="clearStatus()">
             </app-filter-chip>
             <app-filter-chip
-              *ngIf="selectedEnvironment()"
-              label="Environment"
-              [value]="selectedEnvironment()"
-              (remove)="clearEnvironment()">
+              *ngIf="selectedType()"
+              label="Type"
+              [value]="selectedType()"
+              (remove)="clearType()">
             </app-filter-chip>
             <app-filter-chip
               *ngIf="showArchived() === 'true'"
@@ -151,7 +151,6 @@ export interface Api {
         <app-data-table
           [model]="tableModel"
           [loading]="loading()"
-          [skeletonColumnCount]="7"
           size="sm"
           (rowClick)="onRowClick($event)">
         </app-data-table>
@@ -330,14 +329,19 @@ export interface Api {
       color: #10b981;
     }
 
-    .status-pill[data-status="Deprecated"] {
-      background: rgba(245, 158, 11, 0.15);
-      color: #f59e0b;
+    .status-pill[data-status="Inactive"] {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--linear-text-secondary);
     }
 
-    .status-pill[data-status="Experimental"] {
-      background: rgba(139, 92, 246, 0.15);
-      color: #8b5cf6;
+    .status-pill[data-status="Draft"] {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--linear-text-secondary);
+    }
+
+    .status-pill[data-status="Suspended"] {
+      background: rgba(239, 68, 68, 0.15);
+      color: #ef4444;
     }
 
     .status-pill[data-status="Archived"] {
@@ -346,33 +350,34 @@ export interface Api {
     }
   `]
 })
-export class ApisComponent implements OnInit, AfterViewInit {
+export class ApplicationDirectoryComponent implements OnInit, AfterViewInit {
   private router = inject(Router);
   private logger = inject(LoggerService);
 
   @ViewChild('statusTemplate', { static: false }) statusTemplate!: TemplateRef<any>;
 
   loading = signal(false);
-  apis = signal<Api[]>([]);
+  applications = signal<Application[]>([]);
   searchQuery = signal('');
   selectedStatus = signal('');
-  selectedEnvironment = signal('');
+  selectedType = signal('');
   showArchived = signal('false');
   sortBy = signal('name');
   private isUpdatingTable = false;
   private updateTableTimeout: any = null;
 
   readonly statusSelectOptions: SelectOption[] = [
-    { value: '', label: 'All' },
+    { value: '', label: 'All Statuses' },
     { value: 'Active', label: 'Active' },
-    { value: 'Deprecated', label: 'Deprecated' },
-    { value: 'Experimental', label: 'Experimental' }
+    { value: 'Inactive', label: 'Inactive' },
+    { value: 'Suspended', label: 'Suspended' },
+    { value: 'Draft', label: 'Draft' }
   ];
 
-  readonly environmentSelectOptions: SelectOption[] = [
+  readonly typeSelectOptions: SelectOption[] = [
     { value: '', label: 'All' },
-    { value: 'Sandbox', label: 'Sandbox' },
-    { value: 'Production', label: 'Production' }
+    { value: 'Internal', label: 'Internal' },
+    { value: 'External', label: 'External' }
   ];
 
   readonly showArchivedOptions: SelectOption[] = [
@@ -384,45 +389,43 @@ export class ApisComponent implements OnInit, AfterViewInit {
     { value: 'name', label: 'Name (A-Z)' },
     { value: 'name-desc', label: 'Name (Z-A)' },
     { value: 'updated', label: 'Last Updated' },
-    { value: 'consumers', label: 'Most Consumers' }
+    { value: 'usage', label: 'Most Used' }
   ];
 
   tableModel = new TableModel();
 
-  filteredApis = computed(() => {
-    let filtered = [...this.apis()];
+  filteredApplications = computed(() => {
+    let filtered = [...this.applications()];
     const searchQuery = this.searchQuery();
     const selectedStatus = this.selectedStatus();
-    const selectedEnvironment = this.selectedEnvironment();
+    const selectedType = this.selectedType();
     const showArchived = this.showArchived();
     const sortBy = this.sortBy();
     
-    // By default, exclude archived APIs unless explicitly showing them
+    // By default, exclude archived applications unless explicitly showing them
     if (showArchived !== 'true') {
-      filtered = filtered.filter(api => api.status !== 'Archived');
+      filtered = filtered.filter(app => app.status !== 'Archived');
     }
     
-    // Search by name, domain, or vendor
+    // Search by name, short name, owner, or ID
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(api => 
-        api.name.toLowerCase().includes(query) || 
-        api.domain.toLowerCase().includes(query) ||
-        (api.backedByVendor && api.backedByVendor.toLowerCase().includes(query)) ||
-        api.id.toLowerCase().includes(query)
+      filtered = filtered.filter(app => 
+        app.name.toLowerCase().includes(query) || 
+        app.shortName.toLowerCase().includes(query) ||
+        app.owner.toLowerCase().includes(query) ||
+        app.id.toLowerCase().includes(query)
       );
     }
     
     // Filter by status
     if (selectedStatus) {
-      filtered = filtered.filter(api => api.status === selectedStatus);
+      filtered = filtered.filter(app => app.status === selectedStatus);
     }
     
-    // Filter by environment
-    if (selectedEnvironment) {
-      filtered = filtered.filter(api => 
-        api.environments.includes(selectedEnvironment as 'Sandbox' | 'Production')
-      );
+    // Filter by type
+    if (selectedType) {
+      filtered = filtered.filter(app => app.type === selectedType);
     }
     
     // Sort
@@ -434,8 +437,8 @@ export class ApisComponent implements OnInit, AfterViewInit {
           return b.name.localeCompare(a.name);
         case 'updated':
           return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-        case 'consumers':
-          return b.consumerCount - a.consumerCount;
+        case 'usage':
+          return b.apiCount - a.apiCount;
         default:
           return 0;
       }
@@ -448,241 +451,232 @@ export class ApisComponent implements OnInit, AfterViewInit {
     return !!(
       this.searchQuery() ||
       this.selectedStatus() ||
-      this.selectedEnvironment() ||
+      this.selectedType() ||
       this.showArchived() === 'true'
     );
   });
 
   constructor() {
     effect(() => {
-      const filtered = this.filteredApis();
-      this.logger.debug('[ApiCatalog] filteredApis changed, updating table with', filtered.length, 'APIs');
+      const filtered = this.filteredApplications();
+      this.logger.debug('[ApplicationDirectory] filteredApplications changed, updating table with', filtered.length, 'applications');
       this.updateTableData();
     });
   }
 
   ngOnInit() {
     this.buildTable();
-    this.loadApis();
+    this.loadApplications();
   }
 
-  loadApis() {
+  ngAfterViewInit() {
+    // Re-render table to apply status template after view init
+    if (this.applications().length > 0) {
+      this.updateTableData();
+    }
+  }
+
+  loadApplications() {
     this.loading.set(true);
     
     // Mock data - in production this would come from a service
-    const mockApis: Api[] = [
+    const mockApplications: Application[] = [
       {
-        id: 'api-orders',
-        name: 'Orders API',
-        domain: 'Orders',
+        id: 'app-1',
+        name: 'RentalAid',
+        shortName: 'RA',
         status: 'Active',
+        type: 'External',
         environments: ['Sandbox', 'Production'],
-        consumerCount: 5,
-        consumers: ['RentalAid', 'PropertyLLC Portal', 'Leasing Portal', 'Acme Integration', 'Partner API Gateway'],
-        backedByVendor: 'APIGateway Pro',
-        vendorId: '10',
-        version: 'v2.3',
-        createdAt: '2023-06-15T10:00:00Z',
-        updatedAt: '2024-06-20T14:30:00Z',
-        description: 'Manage rental orders, bookings, and reservations'
+        owner: 'RentalAid Team',
+        ownerType: 'team',
+        apiCount: 3,
+        apis: ['Orders API', 'Inventory API', 'Payments API'],
+        createdAt: '2024-01-10T10:00:00Z',
+        updatedAt: '2024-06-15T14:30:00Z',
+        description: 'Property rental management platform'
       },
       {
-        id: 'api-inventory',
-        name: 'Inventory API',
-        domain: 'Inventory',
+        id: 'app-2',
+        name: 'PropertyLLC Portal',
+        shortName: 'PLLC',
         status: 'Active',
+        type: 'External',
         environments: ['Sandbox', 'Production'],
-        consumerCount: 4,
-        consumers: ['RentalAid', 'Leasing Portal', 'Maintenance Ops', 'Partner API Gateway'],
-        backedByVendor: 'APIGateway Pro',
-        vendorId: '10',
-        version: 'v1.8',
-        createdAt: '2023-07-20T09:00:00Z',
-        updatedAt: '2024-06-18T11:00:00Z',
-        description: 'Track property inventory and availability'
+        owner: 'PropertyLLC Team',
+        ownerType: 'team',
+        apiCount: 2,
+        apis: ['Orders API', 'Reporting API'],
+        createdAt: '2024-02-15T09:00:00Z',
+        updatedAt: '2024-06-20T11:00:00Z',
+        description: 'Commercial property management system'
       },
       {
-        id: 'api-payments',
-        name: 'Payments API',
-        domain: 'Payments',
+        id: 'app-3',
+        name: 'Leasing Portal',
+        shortName: 'LP',
         status: 'Active',
+        type: 'Internal',
         environments: ['Sandbox', 'Production'],
-        consumerCount: 3,
-        consumers: ['RentalAid', 'Resident Mobile App', 'Accounting Sync'],
-        backedByVendor: 'SecurePay Systems',
-        vendorId: '5',
-        version: 'v3.1',
-        createdAt: '2023-05-10T14:00:00Z',
+        owner: 'Internal Systems',
+        ownerType: 'team',
+        apiCount: 4,
+        apis: ['Orders API', 'Inventory API', 'Users API', 'Documents API'],
+        createdAt: '2023-11-20T14:00:00Z',
+        updatedAt: '2024-06-18T16:45:00Z',
+        description: 'Internal leasing management application'
+      },
+      {
+        id: 'app-4',
+        name: 'Resident Mobile App',
+        shortName: 'RMA',
+        status: 'Active',
+        type: 'Internal',
+        environments: ['Sandbox', 'Production'],
+        owner: 'Mobile Team',
+        ownerType: 'team',
+        apiCount: 5,
+        apis: ['Users API', 'Notifications API', 'Payments API', 'Maintenance API', 'Documents API'],
+        createdAt: '2024-01-05T08:00:00Z',
         updatedAt: '2024-06-22T09:15:00Z',
-        description: 'Process payments, refunds, and billing'
+        description: 'Mobile app for property residents'
       },
       {
-        id: 'api-users',
-        name: 'Users API',
-        domain: 'Identity',
+        id: 'app-5',
+        name: 'Vendor Portal',
+        shortName: 'VP',
         status: 'Active',
-        environments: ['Sandbox', 'Production'],
-        consumerCount: 3,
-        consumers: ['Leasing Portal', 'Resident Mobile App', 'Legacy CRM Connector'],
-        backedByVendor: null,
-        vendorId: null,
-        version: 'v2.0',
-        createdAt: '2023-04-01T08:00:00Z',
-        updatedAt: '2024-06-15T16:45:00Z',
-        description: 'User authentication and profile management'
-      },
-      {
-        id: 'api-notifications',
-        name: 'Notifications API',
-        domain: 'Communications',
-        status: 'Active',
-        environments: ['Sandbox', 'Production'],
-        consumerCount: 1,
-        consumers: ['Resident Mobile App'],
-        backedByVendor: null,
-        vendorId: null,
-        version: 'v1.5',
-        createdAt: '2023-08-15T10:00:00Z',
+        type: 'Internal',
+        environments: ['Production'],
+        owner: 'Vendor Relations',
+        ownerType: 'team',
+        apiCount: 2,
+        apis: ['Vendors API', 'Documents API'],
+        createdAt: '2024-03-01T10:00:00Z',
         updatedAt: '2024-06-10T13:20:00Z',
-        description: 'Push notifications, email, and SMS delivery'
+        description: 'Portal for vendor onboarding and management'
       },
       {
-        id: 'api-documents',
-        name: 'Documents API',
-        domain: 'Documents',
+        id: 'app-6',
+        name: 'Accounting Sync',
+        shortName: 'AS',
         status: 'Active',
+        type: 'Internal',
         environments: ['Sandbox', 'Production'],
-        consumerCount: 3,
-        consumers: ['Leasing Portal', 'Resident Mobile App', 'Vendor Portal'],
-        backedByVendor: 'DocuStore Inc',
-        vendorId: '7',
-        version: 'v1.2',
-        createdAt: '2023-09-01T11:00:00Z',
-        updatedAt: '2024-06-19T10:00:00Z',
-        description: 'Document storage, signing, and retrieval'
+        owner: 'Finance Team',
+        ownerType: 'team',
+        apiCount: 3,
+        apis: ['Payments API', 'Reporting API', 'Transactions API'],
+        createdAt: '2024-02-20T11:00:00Z',
+        updatedAt: '2024-06-21T10:00:00Z',
+        description: 'Integration with accounting systems'
       },
       {
-        id: 'api-maintenance',
-        name: 'Maintenance API',
-        domain: 'Operations',
+        id: 'app-7',
+        name: 'Maintenance Ops',
+        shortName: 'MO',
         status: 'Active',
+        type: 'Internal',
         environments: ['Sandbox', 'Production'],
-        consumerCount: 2,
-        consumers: ['Resident Mobile App', 'Maintenance Ops'],
-        backedByVendor: null,
-        vendorId: null,
-        version: 'v1.0',
-        createdAt: '2024-01-15T09:00:00Z',
-        updatedAt: '2024-06-21T15:30:00Z',
-        description: 'Maintenance requests and work order management'
+        owner: 'Operations Team',
+        ownerType: 'team',
+        apiCount: 2,
+        apis: ['Maintenance API', 'Inventory API'],
+        createdAt: '2024-04-10T09:00:00Z',
+        updatedAt: '2024-06-19T15:30:00Z',
+        description: 'Maintenance request management system'
       },
       {
-        id: 'api-reporting',
-        name: 'Reporting API',
-        domain: 'Analytics',
+        id: 'app-8',
+        name: 'Acme Integration',
+        shortName: 'ACME',
         status: 'Active',
+        type: 'External',
         environments: ['Production'],
-        consumerCount: 2,
-        consumers: ['PropertyLLC Portal', 'Accounting Sync'],
-        backedByVendor: null,
-        vendorId: null,
-        version: 'v2.1',
-        createdAt: '2023-10-20T14:00:00Z',
-        updatedAt: '2024-06-17T11:00:00Z',
-        description: 'Generate reports and analytics dashboards'
-      },
-      {
-        id: 'api-vendors',
-        name: 'Vendors API',
-        domain: 'Vendors',
-        status: 'Active',
-        environments: ['Sandbox', 'Production'],
-        consumerCount: 1,
-        consumers: ['Vendor Portal'],
-        backedByVendor: null,
-        vendorId: null,
-        version: 'v1.3',
-        createdAt: '2024-02-01T10:00:00Z',
-        updatedAt: '2024-06-12T14:00:00Z',
-        description: 'Vendor onboarding and management'
-      },
-      {
-        id: 'api-transactions',
-        name: 'Transactions API',
-        domain: 'Payments',
-        status: 'Active',
-        environments: ['Production'],
-        consumerCount: 1,
-        consumers: ['Accounting Sync'],
-        backedByVendor: 'SecurePay Systems',
-        vendorId: '5',
-        version: 'v1.1',
-        createdAt: '2024-03-10T11:00:00Z',
-        updatedAt: '2024-06-20T09:00:00Z',
-        description: 'Transaction history and reconciliation'
-      },
-      {
-        id: 'api-analytics',
-        name: 'Analytics API',
-        domain: 'Analytics',
-        status: 'Experimental',
-        environments: ['Sandbox'],
-        consumerCount: 1,
-        consumers: ['Analytics Dashboard'],
-        backedByVendor: null,
-        vendorId: null,
-        version: 'v0.9-beta',
-        createdAt: '2024-04-15T10:00:00Z',
+        owner: 'Vendor: Acme Corp',
+        ownerType: 'vendor',
+        apiCount: 1,
+        apis: ['Orders API'],
+        createdAt: '2024-05-01T14:00:00Z',
         updatedAt: '2024-06-05T16:00:00Z',
-        description: 'Advanced analytics and ML insights (beta)'
+        description: 'Acme Corporation vendor integration'
       },
       {
-        id: 'api-auth-legacy',
-        name: 'Auth API (Legacy)',
-        domain: 'Identity',
-        status: 'Deprecated',
-        environments: ['Production'],
-        consumerCount: 0,
-        consumers: [],
-        backedByVendor: null,
-        vendorId: null,
-        version: 'v1.0',
-        createdAt: '2022-01-10T10:00:00Z',
-        updatedAt: '2024-01-15T14:00:00Z',
-        description: 'Legacy authentication - use Users API instead'
+        id: 'app-9',
+        name: 'Analytics Dashboard',
+        shortName: 'AD',
+        status: 'Inactive',
+        type: 'Internal',
+        environments: ['Sandbox'],
+        owner: 'BI Team',
+        ownerType: 'team',
+        apiCount: 2,
+        apis: ['Reporting API', 'Analytics API'],
+        createdAt: '2024-03-15T10:00:00Z',
+        updatedAt: '2024-05-20T11:00:00Z',
+        description: 'Business intelligence dashboard'
       },
       {
-        id: 'api-billing-old',
-        name: 'Billing API (v1)',
-        domain: 'Payments',
+        id: 'app-10',
+        name: 'Test Harness',
+        shortName: 'TH',
+        status: 'Draft',
+        type: 'Internal',
+        environments: ['Sandbox'],
+        owner: 'QA Team',
+        ownerType: 'team',
+        apiCount: 0,
+        apis: [],
+        createdAt: '2024-06-01T09:00:00Z',
+        updatedAt: '2024-06-01T09:00:00Z',
+        description: 'QA testing application'
+      },
+      {
+        id: 'app-11',
+        name: 'Legacy CRM Connector',
+        shortName: 'LCC',
         status: 'Archived',
+        type: 'Internal',
         environments: [],
-        consumerCount: 0,
-        consumers: [],
-        backedByVendor: null,
-        vendorId: null,
-        version: 'v1.0',
-        createdAt: '2021-06-01T10:00:00Z',
-        updatedAt: '2023-12-01T10:00:00Z',
-        description: 'Archived billing API - replaced by Payments API'
+        owner: 'IT Team',
+        ownerType: 'team',
+        apiCount: 1,
+        apis: ['Users API'],
+        createdAt: '2023-06-01T10:00:00Z',
+        updatedAt: '2024-01-15T14:00:00Z',
+        description: 'Deprecated CRM integration'
+      },
+      {
+        id: 'app-12',
+        name: 'Partner API Gateway',
+        shortName: 'PAG',
+        status: 'Suspended',
+        type: 'External',
+        environments: ['Production'],
+        owner: 'Vendor: TechPartner Inc',
+        ownerType: 'vendor',
+        apiCount: 2,
+        apis: ['Orders API', 'Inventory API'],
+        createdAt: '2024-04-20T11:00:00Z',
+        updatedAt: '2024-06-10T09:00:00Z',
+        description: 'Suspended due to compliance review'
       }
     ];
 
     // Simulate API delay
     setTimeout(() => {
-      this.apis.set(mockApis);
+      this.applications.set(mockApplications);
       this.loading.set(false);
     }, 300);
   }
 
   buildTable() {
     this.tableModel.header = [
-      new TableHeaderItem({ data: 'API Name' }),
-      new TableHeaderItem({ data: 'Domain' }),
+      new TableHeaderItem({ data: 'Application Name' }),
       new TableHeaderItem({ data: 'Status' }),
       new TableHeaderItem({ data: 'Environments' }),
-      new TableHeaderItem({ data: 'Consumers' }),
-      new TableHeaderItem({ data: 'Backed by Vendor' }),
+      new TableHeaderItem({ data: 'Owner' }),
+      new TableHeaderItem({ data: 'API Usage' }),
       new TableHeaderItem({ data: 'Last Updated' })
     ];
   }
@@ -700,35 +694,37 @@ export class ApisComponent implements OnInit, AfterViewInit {
       this.isUpdatingTable = true;
       
       try {
-        const filtered = this.filteredApis();
-        this.tableModel.data = filtered.map((api, index) => {
+        const filtered = this.filteredApplications();
+        this.tableModel.data = filtered.map((app, index) => {
           const firstCell = new TableItem({ 
-            data: api.name, 
-            expandedData: api.id,
-            rawData: { apiId: api.id, index: index }
+            data: app.name + (app.shortName ? ` (${app.shortName})` : ''), 
+            expandedData: app.id,
+            rawData: { applicationId: app.id, index: index }
           });
           
           // Format environments
-          const envText = api.environments.length > 0 
-            ? api.environments.join(', ')
+          const envText = app.environments.length > 0 
+            ? app.environments.join(', ')
             : '—';
           
-          // Format consumers
-          const consumerText = api.consumerCount > 0 
-            ? `Used by ${api.consumerCount} application${api.consumerCount > 1 ? 's' : ''}`
-            : 'No consumers';
+          // Format API usage
+          const apiText = app.apiCount > 0 
+            ? `Uses ${app.apiCount} API${app.apiCount > 1 ? 's' : ''}`
+            : 'No APIs';
           
-          // Format vendor
-          const vendorText = api.backedByVendor || 'Internal (FSR)';
-          
+          // Status cell with template for styled pill
+          const statusCell = new TableItem({ data: app.status });
+          if (this.statusTemplate) {
+            statusCell.template = this.statusTemplate;
+          }
+
           return [
             firstCell,
-            new TableItem({ data: api.domain }),
-            new TableItem({ data: api.status }),
+            statusCell,
             new TableItem({ data: envText }),
-            new TableItem({ data: consumerText }),
-            new TableItem({ data: vendorText }),
-            new TableItem({ data: this.formatDate(api.updatedAt) })
+            new TableItem({ data: app.owner }),
+            new TableItem({ data: apiText }),
+            new TableItem({ data: this.formatDate(app.updatedAt) })
           ];
         });
       } finally {
@@ -761,15 +757,15 @@ export class ApisComponent implements OnInit, AfterViewInit {
     this.updateTableData();
   }
 
-  clearEnvironment() {
-    this.selectedEnvironment.set('');
+  clearType() {
+    this.selectedType.set('');
     this.updateTableData();
   }
 
   clearAllFilters() {
     this.searchQuery.set('');
     this.selectedStatus.set('');
-    this.selectedEnvironment.set('');
+    this.selectedType.set('');
     this.showArchived.set('false');
     this.updateTableData();
   }
@@ -782,25 +778,25 @@ export class ApisComponent implements OnInit, AfterViewInit {
       return;
     }
     
-    const filtered = this.filteredApis();
+    const filtered = this.filteredApplications();
     if (rowIndex >= filtered.length) {
       this.logger.warn('Row index out of bounds', { rowIndex, filteredCount: filtered.length });
       return;
     }
     
-    const api = filtered[rowIndex];
-    if (!api || !api.id) {
-      this.logger.warn('Could not find API at row index', { rowIndex });
+    const application = filtered[rowIndex];
+    if (!application || !application.id) {
+      this.logger.warn('Could not find application at row index', { rowIndex });
       return;
     }
     
-    // Navigate to API detail page
-    this.router.navigate(['/apis', api.id]);
+    // Navigate to application detail page
+    this.router.navigate(['/applications', application.id]);
   }
 
-  addNewApi() {
+  addNewApplication() {
     // Placeholder - will be implemented later
-    this.logger.info('Add New API clicked');
-    alert('Add New API flow coming soon!');
+    this.logger.info('Add New Application clicked');
+    alert('Add New Application flow coming soon!');
   }
 }

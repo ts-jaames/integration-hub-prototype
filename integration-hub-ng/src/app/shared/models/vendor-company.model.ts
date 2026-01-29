@@ -4,12 +4,31 @@ import { VendorLifecycle, ComplianceStatus, IntegrationStatus } from './vendor-l
  * Unified Vendor Status Model
  * 
  * - Draft: Onboarding started but not all required steps complete
- * - Pending Approval: All onboarding steps completed, awaiting activation
- * - Active: Vendor approved and activated, integrations allowed
+ * - Onboarded: Onboarding complete but compliance items pending
+ * - Active: All compliance items complete, vendor can receive API traffic
+ * - Suspended: Temporarily disabled, actions blocked
  * - Rejected: Vendor reviewed and not approved (requires rejection reason)
  * - Archived: No longer active/relevant, hidden from default views
  */
-export type VendorStatus = 'Draft' | 'Pending Approval' | 'Active' | 'Rejected' | 'Archived';
+export type VendorStatus = 'Draft' | 'Onboarded' | 'Active' | 'Suspended' | 'Rejected' | 'Archived';
+
+/**
+ * Vendor Service Account for API access
+ */
+export interface VendorServiceAccount {
+  id: string;
+  vendorId: string;
+  name: string;
+  description?: string;
+  apis: string[];  // API names/scopes assigned
+  status: 'Active' | 'Expiring Soon' | 'Revoked';
+  createdAt: string;
+  createdBy?: string;
+  lastUsedAt?: string;
+  expiresAt?: string;
+  rotatedAt?: string;
+  rotatedBy?: string;
+}
 
 export type VendorComplianceState = 'Complete' | 'Missing Docs' | 'Expired';
 export type VendorReadinessState = 'Ready' | 'Pending Requirements' | 'Blocked';
@@ -65,9 +84,14 @@ export interface VendorCompany {
   // Activation tracking
   activatedAt?: string;
   activatedBy?: string;
+  // Suspension tracking
+  suspendedAt?: string;
+  suspendedBy?: string;
+  suspendReason?: string;
   // Related entities
   users?: VendorUser[];
   apiKeys?: VendorApiKey[];
+  serviceAccounts?: VendorServiceAccount[];
   documents?: VendorDocument[];
   activityLog?: VendorActivityEvent[];
 }

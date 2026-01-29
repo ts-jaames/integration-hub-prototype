@@ -150,7 +150,7 @@ export class VendorSummaryCardComponent {
     switch (status) {
       case 'Active':
         return 'green';
-      case 'Pending Approval':
+      case 'Onboarded':
         return 'blue';
       case 'Draft':
         return 'gray';
